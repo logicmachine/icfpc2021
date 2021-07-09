@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="ja">
+    <head>
+        <title>Sample</title>
+    </head>
+    <body>
+        <div id="container"></div>
+        <script src="./js/matter.min.js"></script>
+        <script>
+          func = function(input) {
+              var Engine = Matter.Engine,
+                  Render = Matter.Render,
+                  Runner = Matter.Runner,
+                  Composites = Matter.Composites,
+                  Common = Matter.Common,
+                  Constraint = Matter.Constraint,
+                  MouseConstraint = Matter.MouseConstraint,
+                  Mouse = Matter.Mouse,
+                  Composite = Matter.Composite,
+                  Bodies = Matter.Bodies;
+
+              // create engine
+              var engine = Engine.create(),
+                  world = engine.world;
+
+              // create renderer
+              var render = Render.create({
+                  element: document.body,
+                  engine: engine,
+                  options: {
+                      width: 800,
+                      height: 600,
+                      showAngleIndicator: true
+                  }
+              });
+
+              Render.run(render);
+
+              // create runner
+              var runner = Runner.create();
+              Runner.run(runner, engine);
+
+              // add stiff multi-body constraint
+              var bodyA = Bodies.polygon(100, 400, 6, 20);
+              var bodyB = Bodies.polygon(200, 400, 1, 50);
+
+              var constraint = Constraint.create({
+                  bodyA: bodyA,
+                  pointA: { x: -10, y: -10 },
+                  bodyB: bodyB,
+                  pointB: { x: -10, y: -10 }
+              });
+
+              Composite.add(world, [bodyA, bodyB, constraint]);
+
+              Composite.add(world, [
+                  // walls
+                  Bodies.rectangle(400, 0, 800, 50, { isStatic: true }),
+                  Bodies.rectangle(400, 600, 800, 50, { isStatic: true }),
+                  Bodies.rectangle(800, 300, 50, 600, { isStatic: true }),
+                  Bodies.rectangle(0, 300, 50, 600, { isStatic: true })
+              ]);
+
+              holes = input.hole.slice()
+              holes.push(holes[0])
+              x_origin = 100
+              y_origin = 100
+              x_scale = 4
+              y_scale = 4
+              for(let i = 0; i < holes.length-1; i++){
+                x1 = holes[i][0] * x_scale + x_origin
+                y1 = holes[i][1] * y_scale  + y_origin
+                x2 = holes[i+1][0] * x_scale  + x_origin
+                y2 = holes[i+1][1] * y_scale  + y_origin
+                xc = (x1 + x2) / 2
+                yc = (y1 + y2) / 2
+                len = Math.sqrt((x2-x1) * (x2-x1) + (y2-y1) * (y2-y1))
+                angle = 0
+                if(x2 != x1){
+                  angle = Math.atan((y2 - y1) / (x2 - x1))
+                }
+                Composite.add(world,[
+                  Bodies.rectangle(xc,yc,len,1, {isStatic: true, angle: angle})
+                ]);
+              }
+
+              // add mouse control
+              var mouse = Mouse.create(render.canvas),
+                  mouseConstraint = MouseConstraint.create(engine, {
+                      mouse: mouse,
+                      constraint: {
+                          // allow bodies on mouse to rotate
+                          angularStiffness: 0,
+                          render: {
+                              visible: false
+                          }
+                      }
+                  });
+
+              Composite.add(world, mouseConstraint);
+
+              // keep the mouse in sync with rendering
+              render.mouse = mouse;
+
+              // fit the render viewport to the scene
+              Render.lookAt(render, {
+                  min: { x: 0, y: 0 },
+                  max: { x: 800, y: 600 }
+              });
+
+              // context for MatterTools.Demo
+              return {
+                  engine: engine,
+                  runner: runner,
+                  render: render,
+                  canvas: render.canvas,
+                  stop: function() {
+                      Matter.Render.stop(render);
+                      Matter.Runner.stop(runner);
+                  }
+              };
+          };
+          input = {"hole":[[45,80],[35,95],[5,95],[35,50],[5,5],[35,5],[95,95],[65,95],[55,80]],"epsilon":150000,"figure":{"edges":[[2,5],[5,4],[4,1],[1,0],[0,8],[8,3],[3,7],[7,11],[11,13],[13,12],[12,18],[18,19],[19,14],[14,15],[15,17],[17,16],[16,10],[10,6],[6,2],[8,12],[7,9],[9,3],[8,9],[9,12],[13,9],[9,11],[4,8],[12,14],[5,10],[10,15]],"vertices":[[20,30],[20,40],[30,95],[40,15],[40,35],[40,65],[40,95],[45,5],[45,25],[50,15],[50,70],[55,5],[55,25],[60,15],[60,35],[60,65],[60,95],[70,95],[80,30],[80,40]]}}
+
+          func(input);
+        </script>
+    </body>
+</html>
