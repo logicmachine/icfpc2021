@@ -2,10 +2,10 @@
   <v-container>
     <v-row>
       <v-col>
-        <h2 class="headline mb-3">Problems</h2>
-        <v-data-table :headers="headers" :items="problems" class="elevation-1" :options="options">
+        <h2 class="headline mb-3">Problem {{ problem_id }}</h2>
+        <v-data-table :headers="headers" :items="submissions" class="elevation-1" :options="options">
           <template #item.id="{ item }">
-            <router-link :to="{ name: 'SubmissionList', params: { problem_id: item.id } }">
+            <router-link :to="{ name: 'Submission', params: { problem_id: problem_id, submission_id: item.id } }">
               {{ item.id }}
             </router-link>
           </template>
@@ -25,17 +25,17 @@ const api_options = {
 }
 
 export default {
-  name: 'Home',
+  name: 'Submissions',
 
   data: () => {
     return {
       problem_id: null,
       headers: [
-        { text: 'ID', value: 'id' },
-        { text: 'Name', value: 'name' },
-        { text: 'Best', value: 'best_dislikes' },
+        { text: 'Submission', value: 'id' },
+        { text: 'Dislikes', value: 'dislikes' },
+        { text: 'Solver', value: 'solver' }
       ],
-      problems: [],
+      submissions: [],
       options: {
         itemsPerPage: -1
       }
@@ -52,10 +52,11 @@ export default {
 
   methods: {
     fetchData(){
+      this.problem_id = this.$route.params.problem_id
       axios
-        .get(`/api/problems`, api_options)
+        .get(`/api/submissions/${this.problem_id}`, api_options)
         .then(response => {
-          this.problems = response.data
+          this.submissions = response.data
         })
     }
   }

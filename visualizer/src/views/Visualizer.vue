@@ -36,6 +36,14 @@
 </template>
 
 <script>
+import axios from 'axios'
+
+const api_options = {
+  headers: {
+    'Authorization': `Bearer ${process.env.VUE_APP_API_TOKEN}`
+  }
+}
+
 export default {
   name: 'Visualizer',
 
@@ -74,6 +82,7 @@ export default {
     window.addEventListener('resize', this.resizeHandler)
     window.addEventListener('mouseup', this.mouseupHandler)
     window.addEventListener('mousemove', this.mousemoveHandler)
+    this.fetchData()
   },
   destroyed(){
     window.removeEventListener('resize', this.resizeHandler)
@@ -86,7 +95,34 @@ export default {
     this.adjustViewport()
   },
 
+  watch: {
+    $route: 'fetchData'
+  },
+
   methods: {
+    // Fetch
+    fetchData(){
+      const problem_id = this.$route.params.problem_id
+      const submission_id = this.$route.params.submission_id
+      if(!problem_id && !submission_id){ return }
+      if(problem_id){
+        axios
+          .get(`/api/problems/${problem_id}`, api_options)
+          .then(response => {
+            this.solution = { vertices: [] }
+            this.problem = response.data.problem
+            if(submission_id){
+              axios 
+                .get(`/api/submissions/${problem_id}/${submission_id}`, api_options)
+                .then(response => {
+                  this.solution = response.data.solution
+                })
+            }
+          })
+      }
+    },
+
+    // Window event handlers
     resizeHandler(){
       this.canvasWidth  = window.innerWidth
       this.canvasHeight = window.innerHeight - 64
