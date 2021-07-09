@@ -22,6 +22,7 @@
               // create engine
               var engine = Engine.create(),
                   world = engine.world;
+              engine.world.gravity.y = 0;
 
               // create renderer
               var render = Render.create({
@@ -40,18 +41,50 @@
               var runner = Runner.create();
               Runner.run(runner, engine);
 
-              // add stiff multi-body constraint
-              var bodyA = Bodies.polygon(100, 400, 6, 20);
-              var bodyB = Bodies.polygon(200, 400, 1, 50);
+              const x_origin = 100
+              const y_origin = 100
+              const x_scale = 4
+              const y_scale = 4
 
-              var constraint = Constraint.create({
-                  bodyA: bodyA,
-                  pointA: { x: -10, y: -10 },
-                  bodyB: bodyB,
-                  pointB: { x: -10, y: -10 }
-              });
+              vertices = input.figure.vertices.slice()
+              edges = input.figure.edges.slice()
+              V = []
+              E = []
+              for(let i = 0; i < vertices.length; i++){
+                x = vertices[i][0] * x_scale + x_origin
+                y = vertices[i][1] * y_scale + y_origin
+                r = 3
+                v = Bodies.circle(x, y, r, {frictionAir: 1, inertia: Infinity})
+                V.push(v)
+              }
+              for(let i = 0; i < edges.length; i++){
+                idx1 = edges[i][0]
+                idx2 = edges[i][1]
+                v1 = V[idx1]
+                v2 = V[idx2]
+                constraint = Constraint.create({
+                  bodyA: v1,
+                  pointA: {x:0, y:0},
+                  bodyB: v2,
+                  pointB: {x:0, y:0}
+                });
+                E.push(constraint)
+              }
 
-              Composite.add(world, [bodyA, bodyB, constraint]);
+              Composite.add(world, V);
+              Composite.add(world, E);
+
+              // var bodyA = Bodies.circle(100, 400, 10);
+              // var bodyB = Bodies.circle(200, 400, 10);
+
+              // var constraint = Constraint.create({
+              //     bodyA: bodyA,
+              //     pointA: { x: 0, y: 0 },
+              //     bodyB: bodyB,
+              //     pointB: { x: 0, y: 0 }
+              // });
+
+              // Composite.add(world, [bodyA, bodyB, constraint]);
 
               Composite.add(world, [
                   // walls
@@ -63,10 +96,6 @@
 
               holes = input.hole.slice()
               holes.push(holes[0])
-              x_origin = 100
-              y_origin = 100
-              x_scale = 4
-              y_scale = 4
               for(let i = 0; i < holes.length-1; i++){
                 x1 = holes[i][0] * x_scale + x_origin
                 y1 = holes[i][1] * y_scale  + y_origin
@@ -78,9 +107,18 @@
                 angle = 0
                 if(x2 != x1){
                   angle = Math.atan((y2 - y1) / (x2 - x1))
+                  if(x2 < x1){
+                    angle += Math.PI
+                  }
                 }
+                width = 100
+                body = Bodies.rectangle(xc,yc,len,width, {isStatic: true, angle: angle, density:1})
+                dy = -(x2 - x1) / len
+                dx = (y2 - y1) / len
+                // Matter.Body.translate(body, {x:0, y:100})
+                Matter.Body.translate(body, {x:width/2 * dx, y:width/2 * dy})
                 Composite.add(world,[
-                  Bodies.rectangle(xc,yc,len,1, {isStatic: true, angle: angle})
+                  body
                 ]);
               }
 
