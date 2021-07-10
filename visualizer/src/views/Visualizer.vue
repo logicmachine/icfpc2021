@@ -85,12 +85,14 @@ export default {
     this.fetchData()
   },
   destroyed(){
+    document.documentElement.className = ''
     window.removeEventListener('resize', this.resizeHandler)
     window.removeEventListener('mouseup', this.mouseupHandler)
     window.removeEventListener('mousemove', this.mousemoveHandler)
   },
 
   mounted(){
+    document.documentElement.className = 'no-overflow'
     this.resizeHandler()
     this.adjustViewport()
   },
@@ -116,7 +118,10 @@ export default {
                 .get(`/api/submissions/${problem_id}/${submission_id}`, api_options)
                 .then(response => {
                   this.solution = response.data.solution
+                  this.adjustViewport()
                 })
+            }else{
+              this.adjustViewport()
             }
           })
       }
@@ -266,6 +271,10 @@ export default {
 
 <style>
 html {
+  overflow: auto;
+}
+
+html.no-overflow {
   overflow: hidden;
 }
 </style>

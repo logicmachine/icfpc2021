@@ -26,11 +26,6 @@ const routes = [
     path: '/visualize',
     name: 'Visualizer',
     component: Visualizer
-  },
-  {
-    path: '/visualize/:id',
-    name: 'Visualizer',
-    component: Visualizer
   }
 ]
 
