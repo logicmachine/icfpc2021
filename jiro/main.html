@@ -208,6 +208,33 @@
                 V[best_vi].render.strokeStyle = 'red'
               }
           };
+          var score = document.createElement('score');
+          score.style.color = 'blue';
+          score.style.fontWeight = 'bold';
+          score.innerHTML = 'score:';
+          let container = document.getElementById('container')
+          container.appendChild(score);
+          update_score = function(){
+            let sum = 0
+            for(let i = 0; i < holes.length; i++){
+              let x1 = holes[i][0]
+              let y1 = holes[i][1]
+              let min_dist = 123456789123456789
+              for(let j = 0; j < V.length; j++){
+                let x2 = V[j].position.x
+                let y2 = V[j].position.y
+                x2 = (x2 - x_origin) / x_scale
+                y2 = (y2 - y_origin) / y_scale
+                const dist = (x2-x1)*(x2-x1) + (y2-y1)*(y2-y1)
+                if(dist < min_dist){
+                  min_dist = dist
+                }
+              }
+              sum += min_dist
+            }
+            score.innerHTML = 'score:' + sum
+          }
+          setInterval(update_score, 100)
         </script>
     </body>
 </html>
