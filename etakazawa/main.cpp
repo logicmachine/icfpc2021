@@ -6,6 +6,7 @@
 #include <set>
 #include <algorithm>
 #include <queue>
+#include <chrono>
 
 using namespace std;
 
@@ -385,22 +386,27 @@ void solve(const int n_figure,
            const polygon& holes_poly,
            const vector<vector<int>>& in_holes_map,
            const int eps,
-           const int maxh, const int maxw)
+           const int maxh, const int maxw,
+           const int timeout_sec=10)
 {
+  auto start_time = chrono::system_clock::now();
+
   mt19937 engine(1);
   vector<P> pose = vertices;
 
-  int max_t = 5;
+  int max_t = 100;
   vector<int> order(n_figure);
   for (int i = 0; i < n_figure; i++) order[i] = i;
 
   vector<P> maxPose;
   int max_ok_num = -1;
   int ok_num = 0;
+  double min_score = 1e18;
+
   for (int t = 0; t < max_t; t++) {
     shuffle(order.begin(), order.end(), engine);
-    // 接続順に並び替える（幅優先順序の方が制約の依存関係順になるので良さそう？）
-    order = getToporogicalOrder(order, n_figure, vertices, m_figure, edges);
+    // 4回に1回は接続順に並び替える（幅優先順序の方が制約の依存関係順になるので良さそう？）
+    if (t%4!=3) order = getToporogicalOrder(order, n_figure, vertices, m_figure, edges);
     
     ok_num = 0;
     vector<int> fixed(n_figure); // 位置が決定済みか
@@ -436,18 +442,29 @@ void solve(const int n_figure,
         fixed[id] = 0;
         pose[id] = P(-1, -1);
         // cerr << id << ": MISS" << endl;
+        break;
       }
-    }
-    if (max_ok_num < ok_num) {
+    } // poseの決定
+    if (max_ok_num <= ok_num) {
       max_ok_num = ok_num;
-      maxPose = pose;
     }
-    if (ok_num == n_figure) break;
+    if (ok_num == n_figure) {
+      double score = calcDislikes(pose, fixed, holes_poly);
+      if (score < min_score) {
+        maxPose = pose;
+        min_score = score;
+      }
+      if (score == 0) break;
+    }
+
+    auto end_time = chrono::system_clock::now();
+    double elapsed = std::chrono::duration_cast<std::chrono::seconds>(end_time-start_time).count();
+    if (elapsed > timeout_sec) break; // タイムアウトで終了
   }
   
   if (max_ok_num == n_figure) {
     cerr << "ok" << endl;
-    cerr << max_ok_num << " / " << n_figure << endl;
+    cerr << "score: " << min_score << " | " << max_ok_num << " / " << n_figure << endl;
     // validateEdges(edges, maxPose, eps);
     OutputJson(maxPose);
   }
@@ -525,7 +542,7 @@ int main(void) {
   }
 
   // 制約を満たす中で一番評価値が高くなる場所に置く
-  solve2(n_figure, vertices, m_figure, edges, holes_poly, in_holes_map,
+  solve(n_figure, vertices, m_figure, edges, holes_poly, in_holes_map,
         eps, maxh, maxw);
 
 
