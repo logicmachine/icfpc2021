@@ -4,9 +4,10 @@ import json
 import argparse
 import subprocess
 import requests
+from evaluate import evaluate
 
-ENDPOINT = 'https://icfpc.logicmachine.jp'
-# ENDPOINT = 'http://localhost:5000'
+# ENDPOINT = 'https://icfpc.logicmachine.jp'
+ENDPOINT = 'http://localhost:5000'
 TOKEN = 'G5wh0MEeI4ASstafP4Ih'
 
 API_HEADERS = {
@@ -56,7 +57,14 @@ def submit_solution(problem_id, solution):
     r = requests.post(ENDPOINT + '/api/submit/' + str(problem_id), json.dumps(solution), headers=API_HEADERS)
     return r.json()
 
-def run(problem_id, solver_name, args):
+def evaluate_solution(problem, solution):
+    r = evaluate(problem, solution)
+    return {
+        'messages': r.messages,
+        'score': r.score
+    }
+
+def run(problem_id, solver_name, dry_run, args):
     problem = fetch_problem(problem_id)
     problem_body = problem2text(json.dumps(problem['problem']))
     proc = subprocess.Popen(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE)
@@ -69,7 +77,10 @@ def run(problem_id, solver_name, args):
         'solver': solver_name,
         'solution': solution_body
     }
-    ret = submit_solution(problem_id, solution)
+    if dry_run:
+        ret = evaluate_solution(problem['problem'], solution_body)
+    else:
+        ret = submit_solution(problem_id, solution)
     print(problem_id, ret)
 
 
@@ -77,11 +88,12 @@ def main():
     parser = argparse.ArgumentParser(description='Solver runner')
     # parser.add_argument('--serial', '-s', action='store_true', help='use serial runner')
     parser.add_argument('--name', '-n', required=True, help='solver name')
+    parser.add_argument('--dry', '-d', action='store_true', help='do not submit')
     args, remains = parser.parse_known_args()
 
     problems = fetch_problem_list()
     for problem in problems:
-        run(problem['id'], args.name, remains)
+        run(problem['id'], args.name, args.dry, remains)
 
 if __name__ == '__main__':
     main()
