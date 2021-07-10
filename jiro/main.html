@@ -1,16 +1,25 @@
 <!DOCTYPE html>
 <html lang="ja">
     <head>
+        <style>
+          canvas {
+            position: absolute;
+          }
+        </style>
         <title>Sample</title>
     </head>
     <body>
         <div id="container"></div>
+        <canvas id="canvas" style="z-index:1"></canvas>
+        <canvas id="overlay" width="800" height="600" style="z-index:2; pointer-events: none;"></canvas>
         <script src="./js/matter.min.js"></script>
         <script>
           const x_origin = 100
           const y_origin = 100
-          const x_scale = 4
-          const y_scale = 4
+          const x_scale = 10
+          const y_scale = 10
+          const width = 800
+          const height = 600
           func = function(input) {
               var Engine = Matter.Engine,
                   Render = Matter.Render,
@@ -28,13 +37,17 @@
                   world = engine.world;
               engine.world.gravity.y = 0;
 
+              var canvas = document.getElementById('canvas')
+              var overlay = document.getElementById('overlay')
+
               // create renderer
               render = Render.create({
                   element: document.body,
                   engine: engine,
+                  canvas: canvas,
                   options: {
-                      width: 800,
-                      height: 600,
+                      width: width,
+                      height: height,
                       wireframes: false,
                       showAngleIndicator: true,
                       background: '#aaaaaa'
@@ -65,12 +78,12 @@
                     angle += Math.PI
                   }
                 }
-                width = 10
-                let body = Bodies.rectangle(xc,yc,len,width, {isStatic: true, angle: angle, density:1})
+                hole_line_width = 10
+                let body = Bodies.rectangle(xc,yc,len,hole_line_width, {isStatic: true, angle: angle, density:1})
                 dy = -(x2 - x1) / len
                 dx = (y2 - y1) / len
                 // Matter.Body.translate(body, {x:0, y:100})
-                Matter.Body.translate(body, {x:width/2 * dx, y:width/2 * dy})
+                Matter.Body.translate(body, {x:hole_line_width/2 * dx, y:hole_line_width/2 * dy})
                 Composite.add(world,[
                   body
                 ]);
@@ -140,6 +153,24 @@
                   min: { x: 0, y: 0 },
                   max: { x: 800, y: 600 }
               });
+
+              //grid線を書く
+              let context = overlay.getContext('2d')
+              context.linewidth = 1;
+              for(let i = 0; i < height; i+=y_scale){
+                context.beginPath();
+                context.moveTo(0,i);
+                context.lineTo(width,i);
+                context.closePath();
+                context.stroke();
+              }
+              for(let j = 0; j < width; j+=x_scale){
+                context.beginPath();
+                context.moveTo(j,0);
+                context.lineTo(j,height);
+                context.closePath();
+                context.stroke();
+              }
 
               // context for MatterTools.Demo
               return {
