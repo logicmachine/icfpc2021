@@ -58,14 +58,14 @@
                 xc = (x1 + x2) / 2
                 yc = (y1 + y2) / 2
                 len = Math.sqrt((x2-x1) * (x2-x1) + (y2-y1) * (y2-y1))
-                angle = 0
+                angle = Math.PI / 2
                 if(x2 != x1){
                   angle = Math.atan((y2 - y1) / (x2 - x1))
                   if(x2 < x1){
                     angle += Math.PI
                   }
                 }
-                width = 100
+                width = 10
                 let body = Bodies.rectangle(xc,yc,len,width, {isStatic: true, angle: angle, density:1})
                 dy = -(x2 - x1) / len
                 dx = (y2 - y1) / len
