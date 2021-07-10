@@ -544,7 +544,7 @@ void BrainWallSolver::move() {
 #endif
         std::vector<std::pair<double, std::vector<int>>> candidates;
         double d = dist(vertices[i], vertices[j]);
-        double add_ene = 0.0;
+        //double add_ene = 0.0;
         if (std::abs(d / d0 - 1.0) > eps) {
             //bool is_found = false;
             for (int x = hole_params[0]; x <= hole_params[1]; x++) {
