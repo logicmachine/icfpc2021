@@ -178,6 +178,9 @@ def evaluate(problem, solution):
     if not test_in_hole(hole_vertices, problem_edges, solution_vertices):
         result.add_message('Pose must fit to the hole.')
 
+    if len(result.messages) > 0:
+        return result
+
     score = 0
     for h in hole_vertices:
         best = distance(h, solution_vertices[0])

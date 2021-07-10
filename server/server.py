@@ -68,7 +68,7 @@ def problem_list():
 def get_problem(problem_id):
     authenticate()
     cur = get_db().cursor()
-    cur.execute('select id, remote_id, body from problems where id=?', (problem_id))
+    cur.execute('select id, remote_id, body from problems where id=?', (problem_id,))
     row = cur.fetchone()
     if row is None:
         abort(404, 'problem not found')
@@ -83,7 +83,7 @@ def get_submissions(problem_id):
     authenticate()
     cur = get_db().cursor()
     submissions = []
-    for row in cur.execute('select id, solver, score from submissions where problem_id=?', (problem_id)):
+    for row in cur.execute('select id, solver, score from submissions where problem_id=?', (problem_id,)):
         submissions.append({
             'id': row[0],
             'solver': row[1],
@@ -112,7 +112,7 @@ def submit_solution(problem_id):
     authenticate()
     db  = get_db()
     cur = db.cursor()
-    cur.execute('select id, body from problems where id=?', (problem_id))
+    cur.execute('select id, body from problems where id=?', (problem_id,))
     row = cur.fetchone()
     if row is None:
         abort(404, 'problem not found')

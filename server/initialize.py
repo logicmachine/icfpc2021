@@ -12,7 +12,7 @@ def main():
         name, ext = os.path.splitext(basename)
         with open(path, 'r') as f:
             body = f.read()
-        cur.execute('insert into problems (id, remote_id, body) values (?, ?, ?)', (int(name), name, body))
+        cur.execute('insert or ignore into problems (id, remote_id, body) values (?, ?, ?)', (int(name), name, body))
     db.commit()
     db.close()
 
