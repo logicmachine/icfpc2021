@@ -68,10 +68,11 @@ bool intersectSS(const L &s, const L &t) {
   return ccw(s[0],s[1],t[0])*ccw(s[0],s[1],t[1]) <= 0 &&
          ccw(t[0],t[1],s[0])*ccw(t[0],t[1],s[1]) <= 0;
 }
-// 交差している場合true (重なっている場合はfalse)
+// 交差している場合true (重なっている場合はfalse, 1点のみ接している場合はfalse)
 bool intersectStrictlySS(const L &s, const L &t) {
-  // bool is_same_endpoint = (s[0] == t[0] || s[0] == t[1] || s[1] == t[0] || s[1] == t[1]);
-  return intersectSS(s, t) && !sameLL(s, t);// && !is_same_endpoint;
+  bool is_same_endpoint = (s[0] == t[0] || s[0] == t[1] || s[1] == t[0] || s[1] == t[1]);
+  is_same_endpoint &= !((s[0] == t[0] && s[1] == t[0]) || (s[0] == t[1] && s[1] == t[0]));
+  return intersectSS(s, t) && !sameLL(s, t) && !is_same_endpoint;
 }
 bool intersectSP(const L &s, const P &p) {
   return abs(s[0]-p)+abs(s[1]-p)-abs(s[1]-s[0]) < EPS; // triangle inequality
@@ -131,8 +132,8 @@ P rotate(const P& center, const P& src, double theta) {
   P p(cos(theta), sin(theta));
   return p * (src - center) + center;
 }
-ldouble distancePP(const P &p1, const P &p2) {
-  return abs(p1 - p2);
+ldouble distanceSqurePP(const P &p1, const P &p2) {
+  return abs(p1 - p2) * abs(p1 - p2);
 }
 
 struct Edge {
@@ -154,7 +155,7 @@ void OutputJson(const vector<P>& pose) {
 double nearesetDistance(const P &p, const polygon& holes_poly) {
   ldouble min_d = 1e9;
   for (const auto& hole : holes_poly) {
-    min_d = min(min_d, distancePP(p, hole));
+    min_d = min(min_d, distanceSqurePP(p, hole));
   }
   return min_d;
 }
@@ -166,8 +167,7 @@ double calcDislikes(const vector<P>& pose, const vector<int>& fixed, const polyg
     for (int i = 0; i < pose.size(); i++) {
       const auto& p = pose[i];
       // 決定済みのもののみ計算
-      if (fixed[i])
-        min_d = min(min_d, distancePP(p, hole));
+      if (fixed[i]) min_d = min(min_d, distanceSqurePP(p, hole));
     }
     dislike += min_d;
   }
@@ -181,8 +181,7 @@ double calcEvaluation(const vector<P>& pose, const vector<int>& fixed, const pol
     for (int i = 0; i < pose.size(); i++) {
       const auto& p = pose[i];
       // 決定済みのもののみ計算
-      if (fixed[i])
-        min_d = min(min_d, distancePP(p, hole));
+      if (fixed[i]) min_d = min(min_d, distanceSqurePP(p, hole));
     }
     dislike += min_d;
   }
@@ -191,8 +190,8 @@ double calcEvaluation(const vector<P>& pose, const vector<int>& fixed, const pol
 
 bool isIntersectPoly(const polygon& holes_poly, const P& p1, const P& p2) {
   L line(p1, p2);
-  for (int i = 0; i < holes_poly.size() - 1; i++) {
-    L hole_line(holes_poly[i], holes_poly[i + 1]);
+  for (int i = 0; i < holes_poly.size(); i++) {
+    L hole_line(holes_poly[i], holes_poly[(i + 1) % holes_poly.size()]);
     if (intersectStrictlySS(line, hole_line)) return true;
   }
   return false;
@@ -208,14 +207,16 @@ bool isValidAddPointToPose(const P& p, const int id,
                            const int eps) {
   int x = (int)real(p), y = (int)imag(p);
   if (!in_holes_map[y][x]) return false; // 領域内でないと駄目
+
   // 接続している点について
   for (const auto& edge : edges[id]) {
     if (!fixed[edge.to]) continue;
     const auto& adjp = pose[edge.to]; // 隣接点
-    ldouble diff = abs(edge.distance / distancePP(p, adjp) - 1); // 元々の距離と今の点から隣接点の距離
+    ldouble diff = abs(distanceSqurePP(p, adjp) / edge.distance - 1); // 元々の距離と今の点から隣接点の距離
 
     // cerr << id << " " << edge.to << " : " << diff << " <= " << eps / 1000000. << " ";
-    // cerr << p << " - " << adjp << " = " << distancePP(p, adjp) << " / " << edge.distance << endl;
+    // cerr << p << " - " << adjp << " = " << distanceSqurePP(p, adjp) << " / " << edge.distance << endl;
+    // if (isIntersectPoly(holes_poly, p, adjp)) cerr << "intersect fail." << endl;
     if (diff > eps / 1000000.) return false;
     if (isIntersectPoly(holes_poly, p, adjp)) return false; // 交差している場合駄目
   }
@@ -260,7 +261,7 @@ void validateEdges(const vector<vector<Edge>>& edges, const vector<P>& pose, con
     for (const auto& edge : edges[u]) {
       int v = edge.to;
       if (v < u) continue;
-      ldouble diff = abs(edge.distance / distancePP(pose[u], pose[v]) - 1); // 元々の距離と今の点から隣接点の距離
+      ldouble diff = abs(distanceSqurePP(pose[u], pose[v]) / edge.distance - 1); // 元々の距離と今の点から隣接点の距離
       cerr << u << "-" << v << " : " << diff << " <= " << eps / 1000000. << endl;
       assert(diff < eps);
     }
@@ -364,7 +365,7 @@ void solve2(const int n_figure,
 {
   if (n_figure >= holes_poly.size() && n_figure <= 12) {
     vector<P> pose = tyrMatchAllPattern(n_figure, vertices, m_figure, edges, holes_poly, in_holes_map, eps, maxh, maxw);
-    if (pose.size()) {
+    if (pose.size() == n_figure) {
       OutputJson(pose);
       cerr << "OK" << endl;
     }
@@ -398,6 +399,7 @@ void solve(const int n_figure,
   int ok_num = 0;
   for (int t = 0; t < max_t; t++) {
     shuffle(order.begin(), order.end(), engine);
+    // 接続順に並び替える（幅優先順序の方が制約の依存関係順になるので良さそう？）
     order = getToporogicalOrder(order, n_figure, vertices, m_figure, edges);
     
     ok_num = 0;
@@ -405,7 +407,6 @@ void solve(const int n_figure,
     for (int id : order) {
       double min_dislikes = 1e18;
       P min_p;
-      
       fixed[id] = 1; // 一旦決まったことにする最後に失敗時は戻す
       for (int y = 0; y < maxh; y++) {
         for (int x = 0; x < maxw; x++) {
@@ -447,7 +448,6 @@ void solve(const int n_figure,
   if (max_ok_num == n_figure) {
     cerr << "ok" << endl;
     cerr << max_ok_num << " / " << n_figure << endl;
-
     // validateEdges(edges, maxPose, eps);
     OutputJson(maxPose);
   }
@@ -478,7 +478,7 @@ int main(void) {
   // cerr << "holes" << endl;
   // for (int i = 0; i < n_hole; i++) {
   //   for (int j = i + 1; j < n_hole; j++) {
-  //     cerr << i << " - " << j << " : " << distancePP(holes_poly[i], holes_poly[j]) << endl; 
+  //     cerr << i << holes_poly[i] << " - " << j << holes_poly[j] << " : " << distanceSqurePP(holes_poly[i], holes_poly[j]) << endl; 
   //   }
   // }
 
@@ -495,7 +495,7 @@ int main(void) {
   // cerr << "edges" << endl;
   for (int i = 0; i < m_figure; i++) {
     int u, v; cin >> u >> v;
-    ldouble distance = distancePP(vertices[u], vertices[v]);
+    ldouble distance = distanceSqurePP(vertices[u], vertices[v]);
     edges[u].emplace_back(v, distance);
     edges[v].emplace_back(u, distance);
     // cerr << u << " - " << v << " : " << distance << endl;
@@ -503,6 +503,7 @@ int main(void) {
 
   int eps;
   cin >> eps;
+  // cerr << "eps " << eps << endl;
 
   int buf = 10;
   const int maxw = maxx + buf;
@@ -524,7 +525,7 @@ int main(void) {
   }
 
   // 制約を満たす中で一番評価値が高くなる場所に置く
-  solve(n_figure, vertices, m_figure, edges, holes_poly, in_holes_map,
+  solve2(n_figure, vertices, m_figure, edges, holes_poly, in_holes_map,
         eps, maxh, maxw);
 
 
