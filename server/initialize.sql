@@ -1,9 +1,14 @@
 create table problems (
-			id        integer primary key,
-			remote_id text,
-			body      text not null
+			id           integer primary key,
+			remote_id    integer not null,
+			bonus        integer not null,
+			min_dislikes integer not null,
+			hole_size    integer not null,
+			num_vertices integer not null,
+			num_edges    integer not null,
+			body         text not null
 );
-create index problem_remote_index on problems(remote_id);
+create index problem_remote_index on problems(remote_id, bonus);
 
 create table submissions (
 			id         integer   primary key,

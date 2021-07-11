@@ -6,8 +6,8 @@ import subprocess
 import requests
 from evaluate import evaluate
 
-# ENDPOINT = 'https://icfpc.logicmachine.jp'
-ENDPOINT = 'http://localhost:5000'
+ENDPOINT = 'https://icfpc.logicmachine.jp'
+# ENDPOINT = 'http://localhost:5000'
 TOKEN = 'G5wh0MEeI4ASstafP4Ih'
 
 API_HEADERS = {
