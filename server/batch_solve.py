@@ -4,7 +4,7 @@ import json
 import argparse
 import subprocess
 import requests
-import joblib
+from multiprocessing import Pool
 from evaluate import evaluate
 
 ENDPOINT = 'https://icfpc.logicmachine.jp'
@@ -120,18 +120,34 @@ def run(problem_id, solver_name, dry_run, args):
         ret = submit_solution(problem_id, solution)
     print(problem_id, ret)
 
+def run_multiprocessing(args):
+    run(args['id'], args['name'], args['dry'], args['remains'])
+
 
 def main():
     parser = argparse.ArgumentParser(description='Solver runner')
     parser.add_argument('--parallel', '-p', action='store_true', help='use parallel runner')
     parser.add_argument('--name', '-n', required=True, help='solver name')
+    parser.add_argument('--single', '-s', help='problem id')
     parser.add_argument('--dry', '-d', action='store_true', help='do not submit')
     args, remains = parser.parse_known_args()
 
-    problems = fetch_problem_list()
-    if args.parallel:
-        joblib.Parallel(n_jobs=-1)(joblib.delayed(run)(p['id'], args.name, args.dry, remains) for p in problems)
+    if args.single is not None:
+        run(args.single, args.name, args.dry, remains)
+    elif args.parallel:
+        problems = fetch_problem_list()
+        tasks = []
+        for p in problems:
+            tasks.append({
+                'id': p['id'],
+                'name': args.name,
+                'dry': args.dry,
+                'remains': remains
+            })
+        p = Pool()
+        p.map(run_multiprocessing, tasks)
     else:
+        problems = fetch_problem_list()
         for problem in problems:
             run(problem['id'], args.name, args.dry, remains)
 
