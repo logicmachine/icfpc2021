@@ -10,7 +10,7 @@ def main():
     db = sqlite3.connect(DATABASE)
     cur = db.cursor()
     problems = []
-    for row in cur.execute('select id, remote_id from problems'):
+    for row in cur.execute('select id, remote_id from problems where bonus=0'):
         if row[1] is not None:
             problems.append(row)
     for problem in problems:
@@ -23,7 +23,7 @@ def main():
         if row[0] >= 9223372036854775807:
             continue
         r = requests.post(
-            'https://poses.live/api/problems/' + problem[1] + '/solutions',
+            'https://poses.live/api/problems/' + str(problem[1]) + '/solutions',
             row[1],
             headers={
                 'Content-Type': 'application/json',

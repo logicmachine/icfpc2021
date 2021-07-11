@@ -138,12 +138,13 @@ def main():
         problems = fetch_problem_list()
         tasks = []
         for p in problems:
-            tasks.append({
-                'id': p['id'],
-                'name': args.name,
-                'dry': args.dry,
-                'remains': remains
-            })
+            if p['best_dislikes'] != 0:
+                tasks.append({
+                    'id': p['id'],
+                    'name': args.name,
+                    'dry': args.dry,
+                    'remains': remains
+                })
         p = Pool()
         p.map(run_multiprocessing, tasks)
     else:
