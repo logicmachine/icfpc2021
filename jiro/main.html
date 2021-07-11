@@ -14,12 +14,17 @@
         <canvas id="overlay" width="800" height="600" style="z-index:2; pointer-events: none;"></canvas>
         <script src="./js/matter.min.js"></script>
         <script>
+          let dist = function(xy1, xy2){
+            return (xy1.x - xy2.x) * (xy1.x - xy2.x) + (xy1.y - xy2.y) * (xy1.y - xy2.y)
+          }
           const x_origin = 100
           const y_origin = 100
           const x_scale = 10
-          const y_scale = 10
+          const y_scale = x_scale
           const width = 800
           const height = 600
+          let eps
+          let constraint_dists = []
           func = function(input) {
               var Engine = Matter.Engine,
                   Render = Matter.Render,
@@ -114,13 +119,17 @@
                   pointB: {x:0, y:0},
                   render:{
                     lineWidth: 1,
-                  }
+                  },
+                  stiffness: 0.001
                 });
                 E.push(constraint)
+                constraint_dists.push(dist(v1.position, v2.position))
               }
 
               Composite.add(world, V);
               Composite.add(world, E);
+
+              eps = input.epsilon
 
               Composite.add(world, [
                   // walls
@@ -245,7 +254,8 @@
           score.innerHTML = 'score:';
           let container = document.getElementById('container')
           container.appendChild(score);
-          update_score = function(){
+          update = function(){
+            //score
             let sum = 0
             for(let i = 0; i < holes.length; i++){
               let x1 = holes[i][0]
@@ -264,8 +274,23 @@
               sum += min_dist
             }
             score.innerHTML = 'score:' + sum
+
+            //長さの制約
+            for(let i = 0; i < E.length; i++){
+              let d = dist(E[i].bodyA.position, E[i].bodyB.position)
+              let constraint_d = constraint_dists[i]
+              let color = 'white'
+              let diff = d/constraint_d - 1
+              let threshold = eps / 1000000
+              if(diff > eps / 1000000){
+                color = 'red'
+              }else if(diff < eps / 1000000){
+                color = 'blue'
+              }
+              E[i].render.strokeStyle = color
+            }
           }
-          setInterval(update_score, 100)
+          setInterval(update, 100)
         </script>
     </body>
 </html>
