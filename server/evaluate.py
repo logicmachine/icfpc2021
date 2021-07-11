@@ -177,7 +177,9 @@ def test_in_hole(hole_vertices, problem_edges, solution_vertices, wallhack):
                 cur_ccw = ccw(e.a, e.b, hc)
                 if cur_ccw * last_ccw < 0:
                     return False
-                elif cur_ccw != 0:
+            else:
+                cur_ccw = ccw(e.a, e.b, hb)
+                if cur_ccw != 0:
                     last_ccw = cur_ccw
     return True
 
