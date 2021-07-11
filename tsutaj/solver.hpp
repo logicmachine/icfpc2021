@@ -102,6 +102,7 @@ struct Solver {
     }    
     Solver() {
         fp_in = stdin;
+        fp_out = stdout;
         init();
     }
     void init() {
@@ -146,6 +147,12 @@ struct Solver {
     }
 
     void output() {
+        for(int i=0; i<N_figure; i++) {
+            int x, y; tie(x, y) = get_coor_int(answers[i]);
+            fprintf(fp_out, "%d %d\n", x, y);
+        }
+    }
+    void output_json() {
         fprintf(fp_out, "{\n");
         fprintf(fp_out, "  \"vertices\": [\n");
         for(int i=0; i<N_figure; i++) {
@@ -276,6 +283,7 @@ struct Solver {
         input();
         solve();
         output();
+        // output_json();
         calc_penalty(answers, true);
         int score = evaluate();
         fprintf(stderr, "score: %d\n\n", score);
