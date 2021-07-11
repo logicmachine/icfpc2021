@@ -9,6 +9,7 @@ def main():
 
     with open(sys.argv[1], 'r') as f:
         json_obj = json.load(f)
+    json_obj['globalist'] = False
     json_obj['break_a_leg'] = False
     json_obj['wallhack'] = False
     for b in sys.argv[2:]:
