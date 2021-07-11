@@ -270,7 +270,31 @@
                     }
                     return
                   }else if(e.keyCode == 82){//r
-
+                    let cx = mouse.position.x
+                    let cy = mouse.position.y
+                    if(cx%x_scale >= x_scale/2){
+                      cx = (cx - cx%x_scale + x_scale) | 0
+                    }else{
+                      cx = (cx - cx%x_scale) | 0
+                    }
+                    if(cy%y_scale >= y_scale/2){
+                      cy = (cy - cy%y_scale + y_scale) | 0
+                    }else{
+                      cy = (cy - cy%y_scale) | 0
+                    }
+                    for(let i = 0; i < V.length; i++){
+                      let x = V[i].position.x
+                      let y = V[i].position.y
+                      x -= cx
+                      y -= cy
+                      let x2 = y
+                      let y2 = -x
+                      x2 += cx
+                      y2 += cy
+                      V[i].position.x = x2
+                      V[i].position.y = y2
+                    }
+                    return
                   }else if(e.keyCode == 65){//a
                     move_ok = true
                     console.log("active")
