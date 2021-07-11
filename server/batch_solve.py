@@ -4,6 +4,7 @@ import json
 import argparse
 import subprocess
 import requests
+import joblib
 from evaluate import evaluate
 
 ENDPOINT = 'https://icfpc.logicmachine.jp'
@@ -40,12 +41,15 @@ def problem2text(json_str):
     if 'globalist' in obj and obj['globalist']:
         lines.append('1')
         lines.append('GLOBALIST')
-    elif 'break_a_leg' in obj and obj['break_a_leg']:
+    elif 'break_leg' in obj and obj['break_leg']:
         lines.append('1')
         lines.append('BREAK_A_LEG')
     elif 'wallhack' in obj and obj['wallhack']:
         lines.append('1')
         lines.append('WALLHACK')
+    elif 'superflex' in obj and obj['superflex']:
+        lines.append('1')
+        lines.append('SUPERFLEX')
     else:
         lines.append('0')
     return '\n'.join(lines)
@@ -119,14 +123,17 @@ def run(problem_id, solver_name, dry_run, args):
 
 def main():
     parser = argparse.ArgumentParser(description='Solver runner')
-    # parser.add_argument('--serial', '-s', action='store_true', help='use serial runner')
+    parser.add_argument('--parallel', '-p', action='store_true', help='use parallel runner')
     parser.add_argument('--name', '-n', required=True, help='solver name')
     parser.add_argument('--dry', '-d', action='store_true', help='do not submit')
     args, remains = parser.parse_known_args()
 
     problems = fetch_problem_list()
-    for problem in problems:
-        run(problem['id'], args.name, args.dry, remains)
+    if args.parallel:
+        joblib.Parallel(n_jobs=-1)(joblib.delayed(run)(p['id'], args.name, args.dry, remains) for p in problems)
+    else:
+        for problem in problems:
+            run(problem['id'], args.name, args.dry, remains)
 
 if __name__ == '__main__':
     main()
