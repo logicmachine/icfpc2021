@@ -37,7 +37,10 @@ def problem2text(json_str):
     for b in obj['bonuses']:
         lines.append('{} {} {} {}'.format(b['bonus'], b['problem'], b['position'][0], b['position'][1]))
     # Flags
-    if 'break_a_leg' in obj and obj['break_a_leg']:
+    if 'globalist' in obj and obj['globalist']:
+        lines.append('1')
+        lines.append('GLOBALIST')
+    elif 'break_a_leg' in obj and obj['break_a_leg']:
         lines.append('1')
         lines.append('BREAK_A_LEG')
     elif 'wallhack' in obj and obj['wallhack']:
@@ -54,7 +57,10 @@ def text2solution(text):
         if line == '':
             continue
         tokens = line.strip().split()
-        if tokens[0] == 'BREAK_A_LEG':
+        if tokens[0] == 'GLOBALIST':
+            bonuses.append({ 'bonus': tokens[0] })
+            continue
+        elif tokens[0] == 'BREAK_A_LEG':
             bonuses.append({
                 'bonus': tokens[0],
                 'edge': [int(tokens[1]), int(tokens[2])]

@@ -1,6 +1,7 @@
 #!/usr/bin/python3
 import sys
 import json
+from fractions import Fraction
 
 class Point:
     def __init__(self, x, y):
@@ -104,36 +105,46 @@ class EvaluationResult:
         self.bonuses.append(b)
 
 
-def test_length(problem_edges, problem_vertices, solution_vertices, epsilon, broken_leg):
-    for e in problem_edges:
-        pa = problem_vertices[e[0]]
-        pb = problem_vertices[e[1]]
-        sa = solution_vertices[e[0]]
-        sb = solution_vertices[e[1]]
-        pd = distance(pa, pb)
-        sd = distance(sa, sb)
-        th = epsilon * pd
-        v  = 1000000 * sd - 1000000 * pd
-        if v < -th or th < v:
-            return False
-
-    if broken_leg:
-        pd = distance(problem_vertices[broken_leg[0]], problem_vertices[broken_leg[1]])
-        sa1 = solution_vertices[broken_leg[0]]
-        sa2 = solution_vertices[broken_leg[1]]
-        sb  = solution_vertices[len(problem_vertices)]
-        sd1 = 4 * distance(sa1, sb)
-        sd2 = 4 * distance(sa2, sb)
-        th  = epsilon * pd
-        v1  = 1000000 * sd1 - 1000000 * pd
-        v2  = 1000000 * sd2 - 1000000 * pd
-        if v1 < -th or th < v1: return False
-        if v2 < -th or th < v2: return False
-
+def test_length(problem_edges, problem_vertices, solution_vertices, epsilon, globalist, broken_leg):
+    if globalist:
+        acc = Fraction()
+        for e in problem_edges:
+            pa = problem_vertices[e[0]]
+            pb = problem_vertices[e[1]]
+            sa = solution_vertices[e[0]]
+            sb = solution_vertices[e[1]]
+            pd = distance(pa, pb)
+            sd = distance(sa, sb)
+            acc += abs(Fraction(sd, pd) - Fraction(1, 1))
+        return acc <= Fraction(len(problem_edges) * epsilon, 1000000)
+    else:
+        for e in problem_edges:
+            pa = problem_vertices[e[0]]
+            pb = problem_vertices[e[1]]
+            sa = solution_vertices[e[0]]
+            sb = solution_vertices[e[1]]
+            pd = distance(pa, pb)
+            sd = distance(sa, sb)
+            th = epsilon * pd
+            v  = 1000000 * sd - 1000000 * pd
+            if v < -th or th < v:
+                return False
+        if broken_leg:
+            pd = distance(problem_vertices[broken_leg[0]], problem_vertices[broken_leg[1]])
+            sa1 = solution_vertices[broken_leg[0]]
+            sa2 = solution_vertices[broken_leg[1]]
+            sb  = solution_vertices[len(problem_vertices)]
+            sd1 = 4 * distance(sa1, sb)
+            sd2 = 4 * distance(sa2, sb)
+            th  = epsilon * pd
+            v1  = 1000000 * sd1 - 1000000 * pd
+            v2  = 1000000 * sd2 - 1000000 * pd
+            if v1 < -th or th < v1: return False
+            if v2 < -th or th < v2: return False
     return True
 
 def test_in_hole(hole_vertices, problem_edges, solution_vertices, wallhack):
-    wallhacked = {}
+    wallhacked = set()
     for i, p in enumerate(solution_vertices):
         if not contains(hole_vertices, p):
             wallhacked.add(i)
@@ -173,11 +184,16 @@ def test_in_hole(hole_vertices, problem_edges, solution_vertices, wallhack):
 def evaluate(problem, solution):
     result = EvaluationResult()
 
+    globalist  = False
     broken_leg = None
     wallhack   = False
     if 'bonuses' in solution:
         for bonus in solution['bonuses']:
             bonus_type = bonus['bonus'] 
+            if bonus_type == 'GLOBALIST':
+                if not problem['globalist']:
+                    result.add_message('Bonus globalist is unavailable for this problem.')
+                globalist = True
             if bonus_type == 'BREAK_A_LEG':
                 if not problem['break_a_leg']:
                     result.add_message('Bonus break_a_leg is unavailable for this problem.')
@@ -185,7 +201,7 @@ def evaluate(problem, solution):
             if bonus_type == 'WALLHACK':
                 if not problem['wallhack']:
                     result.add_message('Bonus wallhack is unavailable for this problem.')
-                wakkhack = True
+                wallhack = True
 
     if broken_leg is not None:
         if len(solution['vertices']) != len(problem['figure']['vertices']) + 1:
@@ -233,7 +249,7 @@ def evaluate(problem, solution):
         hole_vertices.reverse()
 
     epsilon = problem['epsilon']
-    if not test_length(problem_edges, problem_vertices, solution_vertices, epsilon, broken_leg):
+    if not test_length(problem_edges, problem_vertices, solution_vertices, epsilon, globalist, broken_leg):
         result.add_message('Some edges are too compressed or stretched.')
     if not test_in_hole(hole_vertices, problem_edges + broken_edges, solution_vertices, wallhack):
         result.add_message('Pose must fit to the hole.')
@@ -250,7 +266,6 @@ def evaluate(problem, solution):
     result.score = score // 4
 
     for b in problem['bonuses']:
-        print(b)
         position = Point(b['position'][0], b['position'][1]) * 2
         acquired = False
         for v in solution_vertices:
