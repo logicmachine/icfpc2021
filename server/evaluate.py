@@ -83,16 +83,28 @@ def contains(polygon, p):
     return result
 
 
+class AcquiredBonus:
+    def __init__(self):
+        self.problem = None
+        self.bonus   = None
+
 class EvaluationResult:
     def __init__(self):
         self.score    = None
         self.messages = []
+        self.bonuses  = []
 
     def add_message(self, s):
         self.messages.append(s)
 
+    def add_bonus(self, problem, bonus):
+        b = AcquiredBonus()
+        b.problem = problem
+        b.bonus   = bonus
+        self.bonuses.append(b)
 
-def test_length(problem_edges, problem_vertices, solution_vertices, epsilon):
+
+def test_length(problem_edges, problem_vertices, solution_vertices, epsilon, broken_leg):
     for e in problem_edges:
         pa = problem_vertices[e[0]]
         pb = problem_vertices[e[1]]
@@ -104,16 +116,38 @@ def test_length(problem_edges, problem_vertices, solution_vertices, epsilon):
         v  = 1000000 * sd - 1000000 * pd
         if v < -th or th < v:
             return False
+
+    if broken_leg:
+        pd = distance(problem_vertices[broken_leg[0]], problem_vertices[broken_leg[1]])
+        sa1 = solution_vertices[broken_leg[0]]
+        sa2 = solution_vertices[broken_leg[1]]
+        sb  = solution_vertices[len(problem_vertices)]
+        sd1 = 4 * distance(sa1, sb)
+        sd2 = 4 * distance(sa2, sb)
+        th  = epsilon * pd
+        v1  = 1000000 * sd1 - 1000000 * pd
+        v2  = 1000000 * sd2 - 1000000 * pd
+        if v1 < -th or th < v1: return False
+        if v2 < -th or th < v2: return False
+
     return True
 
-def test_in_hole(hole_vertices, problem_edges, solution_vertices):
+def test_in_hole(hole_vertices, problem_edges, solution_vertices, wallhack):
+    wallhacked = {}
+    for i, p in enumerate(solution_vertices):
+        if not contains(hole_vertices, p):
+            wallhacked.add(i)
+    if wallhack:
+        if len(wallhacked) > 1: return False
+    else:
+        if len(wallhacked) > 0: return False
+
     pose_edges = []
     for e in problem_edges:
-        pose_edges.append(Segment(solution_vertices[e[0]], solution_vertices[e[1]]))
+        if e[0] not in wallhacked and e[1] not in wallhacked:
+            pose_edges.append(Segment(solution_vertices[e[0]], solution_vertices[e[1]]))
+
     n = len(hole_vertices)
-    for p in solution_vertices:
-        if not contains(hole_vertices, p):
-            return False
     for e in pose_edges:
         if not contains(hole_vertices, (e.a + e.b) // 2):
             return False
@@ -139,8 +173,26 @@ def test_in_hole(hole_vertices, problem_edges, solution_vertices):
 def evaluate(problem, solution):
     result = EvaluationResult()
 
-    if len(solution['vertices']) != len(problem['figure']['vertices']):
-        result.add_message('The number of vertices must be equal to vertices in figure.')
+    broken_leg = None
+    wallhack   = False
+    if 'bonuses' in solution:
+        for bonus in solution['bonuses']:
+            bonus_type = bonus['bonus'] 
+            if bonus_type == 'BREAK_A_LEG':
+                if not problem['break_a_leg']:
+                    result.add_message('Bonus break_a_leg is unavailable for this problem.')
+                broken_leg = bonus['edge']
+            if bonus_type == 'WALLHACK':
+                if not problem['wallhack']:
+                    result.add_message('Bonus wallhack is unavailable for this problem.')
+                wakkhack = True
+
+    if broken_leg is not None:
+        if len(solution['vertices']) != len(problem['figure']['vertices']) + 1:
+            result.add_message('The number of vertices must be equal to vertices in figure plus one.')
+    else:
+        if len(solution['vertices']) != len(problem['figure']['vertices']):
+            result.add_message('The number of vertices must be equal to vertices in figure.')
 
     pass_dimension = True
     pass_integer   = True
@@ -164,7 +216,15 @@ def evaluate(problem, solution):
     problem_vertices = []
     for p in problem['figure']['vertices']:
         problem_vertices.append(Point(p[0], p[1]) * 2)
-    problem_edges = problem['figure']['edges']
+    problem_edges = []
+    for e in problem['figure']['edges']:
+        if broken_leg is not None and e[0] == broken_leg[0] and e[1] == broken_leg[1]:
+            continue
+        problem_edges.append(e)
+    broken_edges = []
+    if broken_leg is not None:
+        broken_edges.append([broken_leg[0], len(problem_vertices)])
+        broken_edges.append([broken_leg[1], len(problem_vertices)])
 
     hole_vertices = []
     for p in problem['hole']:
@@ -173,9 +233,9 @@ def evaluate(problem, solution):
         hole_vertices.reverse()
 
     epsilon = problem['epsilon']
-    if not test_length(problem_edges, problem_vertices, solution_vertices, epsilon):
+    if not test_length(problem_edges, problem_vertices, solution_vertices, epsilon, broken_leg):
         result.add_message('Some edges are too compressed or stretched.')
-    if not test_in_hole(hole_vertices, problem_edges, solution_vertices):
+    if not test_in_hole(hole_vertices, problem_edges + broken_edges, solution_vertices, wallhack):
         result.add_message('Pose must fit to the hole.')
 
     if len(result.messages) > 0:
@@ -188,6 +248,17 @@ def evaluate(problem, solution):
             best = min(best, distance(h, v))
         score += best
     result.score = score // 4
+
+    for b in problem['bonuses']:
+        print(b)
+        position = Point(b['position'][0], b['position'][1]) * 2
+        acquired = False
+        for v in solution_vertices:
+            if v == position:
+                acquired = True
+                break
+        if acquired:
+            result.add_bonus(b['bonus'], int(b['problem']))
 
     return result
 
@@ -203,4 +274,5 @@ if __name__ == '__main__':
     result = evaluate(problem, solution)
     print(result.score)
     print(result.messages)
+    print(result.bonuses)
 

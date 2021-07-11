@@ -57,8 +57,21 @@ def problem_list():
     for row in cur.execute('select problem_id, min(score) from submissions group by problem_id'):
         best_scores[row[0]] = row[1]
     problems = []
-    for row in cur.execute('select id, remote_id from problems order by id asc'):
-        data = { 'id': row[0], 'name': row[1], 'best_dislikes': None }
+    query = '''
+        select id, remote_id, bonus, min_dislikes, hole_size, num_edges, num_vertices
+        from problems order by remote_id, bonus asc
+    '''
+    for row in cur.execute(query):
+        data = {
+            'id': row[0],
+            'name': row[1],
+            'bonus': row[2],
+            'min_dislikes': row[3],
+            'best_dislikes': None,
+            'hole_size': row[4],
+            'num_edges': row[5],
+            'num_vertices': row[6],
+        }
         if row[0] in best_scores:
             data['best_dislikes'] = best_scores[row[0]]
         problems.append(data)
