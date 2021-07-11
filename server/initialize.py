@@ -7,6 +7,7 @@ DATABASE = './database.db'
 GLOBALIST_OFFSET = 1000
 BREAK_LEG_OFFSET = 2000
 WALLHACK_OFFSET  = 3000
+SUPERFLEX_OFFSET = 4000
 
 def main():
     db = sqlite3.connect(DATABASE)
@@ -23,6 +24,7 @@ def main():
         body['globalist'] = False
         body['break_leg'] = False
         body['wallhack']  = False
+        body['superflex'] = False
         # plain
         cur.execute(
             '''
@@ -61,6 +63,16 @@ def main():
             ''',
             (key + WALLHACK_OFFSET, key, hole, edges, vertices, json.dumps(body)))
         body['wallhack'] = False
+        # superflex
+        body['superflex'] = True
+        cur.execute(
+            '''
+            insert or ignore into problems
+                (id, remote_id, bonus, min_dislikes, hole_size, num_edges, num_vertices, body)
+                values (?, ?, 4, 0, ?, ?, ?, ?)
+            ''',
+            (key + SUPERFLEX_OFFSET, key, hole, edges, vertices, json.dumps(body)))
+        body['superflex'] = False
 
 
     db.commit()

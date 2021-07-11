@@ -130,16 +130,18 @@ struct VerletSolver : public Solver {
 };
 
 int main() {
+    VerletSolver solver;
+    /*
     int testcase_num;
     scanf("%d", &testcase_num);
     
-    VerletSolver solver;
     char in_buf[128], out_buf[128];
     sprintf(in_buf, "../problems/txt/input_%03d.in", testcase_num);
     sprintf(out_buf, "output/answer_%03d.out", testcase_num);
     string in_filename = in_buf;
     string out_filename = out_buf;
     solver.set_file(in_filename, out_filename);
+    */
     solver.run();
     string html = mov.dumpHtml(5);
     ofstream fout;

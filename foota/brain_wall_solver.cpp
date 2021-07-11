@@ -7,6 +7,8 @@
 #include <iomanip>
 #include <iostream>
 #include <sstream>
+#include <vector>
+#include <map>
 #include <random>
 #include <chrono>
 #include <ranges>
@@ -15,7 +17,10 @@
 std::random_device rd;
 std::mt19937 mt(rd());
 std::chrono::system_clock::time_point start_time;
-constexpr double DEFAULT_TIME_LIMIT = 60.0;
+//constexpr double DEFAULT_TIME_LIMIT = 60.0;
+constexpr double DEFAULT_TIME_LIMIT = 20.0;
+
+std::map<std::string, int> BONUS_TYPES({{"GLOBALIST", 0}, {"BREAK_A_LEG", 1}, {"WALLHACK", 2}});
 
 class BrainWallSolver {
 private:
@@ -23,6 +28,8 @@ private:
     int num_vertices_of_hole;
     int num_vertices;
     int num_edges;
+    int num_bonus_types;
+    int num_bonus_flags;
     std::vector<std::vector<int>> hole;
     std::vector<int> hole_params; // (min_x, max_x, min_y, max_y, center_x, center_y, centroid_x, centroid_y)
     std::vector<std::vector<int>> vertices;
@@ -31,6 +38,11 @@ private:
     std::vector<std::vector<int>> edges;
     std::vector<int> figure_distances;
     std::vector<double> ene;
+    std::vector<std::pair<double, std::vector<std::vector<int>>>> answers;
+    std::vector<std::vector<int>> vertex_candidates;
+    std::vector<std::vector<int>> bonuses;  // bonus_type, problem_id, x, y
+    std::vector<int> bonus_flags;
+    std::vector<std::vector<int>> bonus_candidates;
     double eps;
     double time_limit;
 
@@ -41,7 +53,7 @@ public:
     //void read(const std::string);
     void read();
     double dislike();
-    double energy();
+    double energy(bool use_collision=false);
     void first_step();
     void second_step();
     void calc();
@@ -58,7 +70,8 @@ public:
     double nearest_point_on_hole(const std::vector<int>& point, std::vector<int>& ans);
     //double dist_point_to_line(const std::vector<int>& p1, const std::vector<int>& p2, const std::vector<int> point);
     void output();
-    void output_json(std::string fname);
+    //void output_json(std::string fname);
+    void output_json(bool has_last=false);
 
     template <typename U, typename T>
     double dist(const std::vector<U>& p, const std::vector<T>& q) {
@@ -88,6 +101,74 @@ void BrainWallSolver::read() {
     std::cin >> eps;
     eps /= 1000000.0;
     if (eps == 0.0) eps = 1e-6;
+
+    std::cin >> num_bonus_types;
+    std::vector<int> bonus;
+    int problem_id, px, py;
+    std::string bonus_type;
+    for (int i = 0; i < num_bonus_types; i++) {
+        std::cin >> bonus_type >> problem_id >> px >> py;
+        bonus = {BONUS_TYPES[bonus_type], problem_id, px, py};
+        bonuses.push_back(bonus);
+        bonus_candidates.push_back({px, py});
+    }
+
+    std::cin >> num_bonus_flags;
+    for (int i = 0; i < num_bonus_flags; i++) {
+        bonus_flags.push_back(BONUS_TYPES[bonus_type]);
+    }
+
+    for ([[maybe_unused]]int i = 0; i < num_vertices; i++)
+        vertex_candidates.push_back(std::vector<int>());
+
+    std::vector<std::pair<double, std::vector<int>>> fig_edges_length;
+    for (int e = 0; e < num_edges; e++) {
+        int i = edges[e][0];
+        int j = edges[e][1];
+        fig_edges_length.push_back(std::make_pair(dist(vertices[i], vertices[j]), std::vector<int>({i, j})));
+    }
+    std::vector<std::pair<double, std::vector<int>>> hole_edges_length;
+    for (int i = 0; i < num_vertices_of_hole - 1; i++) {
+        hole_edges_length.push_back(std::make_pair(dist(hole[i], hole[i+1]), std::vector<int>({i, i+1})));
+    }
+    hole_edges_length.push_back(std::make_pair(dist(hole[num_vertices_of_hole-1], hole[0]), std::vector<int>({0, num_vertices_of_hole-1})));
+
+    for (int i = 0; i < num_edges; i++) {
+        double fig_len = fig_edges_length[i].first;
+        auto fig_ids = fig_edges_length[i].second;
+        for (int j = 0; j < num_vertices_of_hole; j++) {
+            double hole_len = hole_edges_length[j].first;
+            auto hole_ids = hole_edges_length[j].second;
+            //if (std::abs(fig_len - hole_len) < fig_len * eps) {
+            if (std::abs(fig_len - hole_len) < 0.0001) {
+                for (int k = 0; k < 2; k++) {
+                    if (vertex_candidates[fig_ids[k]].empty()) {
+                        vertex_candidates[fig_ids[k]].push_back(hole_ids[0]);
+                        vertex_candidates[fig_ids[k]].push_back(hole_ids[1]);
+                    } else {
+                        vertex_candidates[fig_ids[k]].push_back(hole_ids[0]);
+                        vertex_candidates[fig_ids[k]].push_back(hole_ids[1]);
+                        //auto r = std::set_intersection(vertex_candidates[fig_ids[k]].begin(), vertex_candidates[fig_ids[k]].end(), hole_ids.begin(), hole_ids.end(), vertex_candidates[fig_ids[k]].begin());
+                        //vertex_candidates[fig_ids[k]].erase(r,  vertex_candidates[fig_ids[k]].end());
+                    }
+                }
+            }
+        }
+    }
+    for (auto& p : vertex_candidates) {
+        std::sort(p.begin(), p.end());
+        auto r = std::unique(p.begin(), p.end());
+        p.erase(r, p.end());
+    }
+
+    /// debug
+    std::cerr << "vertex_candidates:" << std::endl;
+    int idx = 0;
+    for (const auto& p : vertex_candidates) {
+        std::cerr << idx++ << " :";
+        for (const auto& q : p) std::cerr << " " << q;
+        std::cerr << std::endl;
+    }
 
     int min_x, max_x, min_y, max_y;
     double center_x, center_y, centroid_x, centroid_y;
@@ -304,7 +385,7 @@ double BrainWallSolver::dislike() {
     return energy;
 }
 
- double BrainWallSolver::energy() {
+ double BrainWallSolver::energy(bool use_collision) {
      double sum = 0.0;
      //for (int i = 0; i < num_vertices; i++) sum += ene[i];
      sum += dislike();
@@ -318,35 +399,35 @@ double BrainWallSolver::dislike() {
          //if (std::abs(d / d0 - 1.0) > eps) sum += d1 * 10.0;
      }
 
-#if 0
-    int cnt_in_area = 0;
-    std::vector<bool> is_point_in_area;
-    for (int i = 0; i < num_vertices; i++) {
-        bool is_in = point_in_area(vertices[i]);
-        is_point_in_area.push_back(is_in);
-        if (!is_in) cnt_in_area++;
-    }
-    sum += cnt_in_area * 10.0;
-
-    int cnt_crossing = 0;
-    std::vector<bool> is_crossing_edges;
-    for (int i = 0; i < num_edges; i++) {
-        int a = edges[i][0];
-        int b = edges[i][1];
-        int x = (vertices[a][0] + vertices[b][0]) / 2;
-        int y = (vertices[a][1] + vertices[b][1]) / 2;
-        if (is_point_in_area[a] && is_point_in_area[b] && point_in_area(std::vector<int>({x, y}))) {
-        //if (is_point_in_area[a] && is_point_in_area[b]) {
-            bool is_crossing = crossing_hole(vertices[a], vertices[b]);
-            is_crossing_edges.push_back(is_crossing);
-            if (is_crossing) cnt_crossing++;
-        } else {
-            is_crossing_edges.push_back(true);
-            cnt_crossing++;
+    if (use_collision) {
+        int cnt_in_area = 0;
+        std::vector<bool> is_point_in_area;
+        for (int i = 0; i < num_vertices; i++) {
+            bool is_in = point_in_area(vertices[i]);
+            is_point_in_area.push_back(is_in);
+            if (!is_in) cnt_in_area++;
         }
+        sum += cnt_in_area * 10.0;
+
+        int cnt_crossing = 0;
+        std::vector<bool> is_crossing_edges;
+        for (int i = 0; i < num_edges; i++) {
+            int a = edges[i][0];
+            int b = edges[i][1];
+            int x = (vertices[a][0] + vertices[b][0]) / 2;
+            int y = (vertices[a][1] + vertices[b][1]) / 2;
+            if (is_point_in_area[a] && is_point_in_area[b] && point_in_area(std::vector<int>({x, y}))) {
+            //if (is_point_in_area[a] && is_point_in_area[b]) {
+                bool is_crossing = crossing_hole(vertices[a], vertices[b]);
+                is_crossing_edges.push_back(is_crossing);
+                if (is_crossing) cnt_crossing++;
+            } else {
+                is_crossing_edges.push_back(true);
+                cnt_crossing++;
+            }
+        }
+        sum += cnt_crossing * 10.0;
     }
-    sum += cnt_crossing * 10.0;
-#endif
 
     return sum;
  }
@@ -356,11 +437,27 @@ void BrainWallSolver::first_step() {
     int offset_x = hole_params[4] - figure_params[4]; // center_x
     int offset_y = hole_params[5] - figure_params[5]; // center_y
     for (int i = 0; i < num_vertices; i++) {
-        vertices[i][0] += offset_x;
+        //vertices[i][0] += offset_x;
+        vertices[i][0] += offset_x + 150; // for problem 105
         vertices[i][1] += offset_y;
     }
 #endif
-#if 1
+#if 0
+    std::uniform_int_distribution<> rand(0.0, 1.0);
+    for (int i = 0; i < static_cast<int>(vertex_candidates.size()); i++) {
+        if (!vertex_candidates[i].empty()) {
+            std::uniform_int_distribution<> randint(0, vertex_candidates[i].size() - 1);
+            int idx = vertex_candidates[i][randint(mt)];
+            vertices[i] = hole[idx];
+        } else {
+            if (rand(mt) < 0.5) {
+                std::uniform_int_distribution<> randcand(0, bonus_candidates.size() - 1);
+                vertices[i] = bonus_candidates[randcand(mt)];
+            }
+        }
+    }
+#endif
+#if 0
     std::uniform_int_distribution<> randint(0, num_vertices_of_hole - 1);
     for (int i = 0; i < num_vertices_of_hole && i < num_vertices; i++) {
         vertices[i] = hole[randint(mt)];
@@ -551,6 +648,7 @@ void BrainWallSolver::calc() {
 void BrainWallSolver::move() {
     std::uniform_int_distribution<> randint(0, num_vertices - 1);
     std::uniform_real_distribution<> rand(0.0, 1.0);
+    bool has_opt = false;
     for (int ee = 0; ee < num_edges * 2; ee++) {
         int idx = ee % 2;
         int e = ee / 2;
@@ -590,6 +688,7 @@ void BrainWallSolver::move() {
 #endif
         if (std::abs(d / d0 - 1.0) > eps || is_crossing) {
         //if (std::abs(d / d0 - 1.0) > eps) {
+            has_opt = true;
             //bool is_found = false;
             for (int x = hole_params[0]; x <= hole_params[1]; x++) {
             //for (int x = vertices[j][0] - 10; x <= vertices[j][0] + 10; x++) {
@@ -646,7 +745,10 @@ void BrainWallSolver::move() {
             }
             */
             if (candidates.empty()) {
+                first_step();
+                second_step();
                 std::cerr << "not found" << std::endl;
+#if 0
                 int k = randint(mt);
                 //int l = randint(mt);
                 std::swap(vertices[j], vertices[k]);
@@ -655,6 +757,7 @@ void BrainWallSolver::move() {
                 //std::swap(vertices[l], vertices[k]);
                 //vertices[j] = hole[randhole(mt)];
                 //vertices[j] = hole[randhole(mt)];
+#endif            
             }
             //if (vertices[i] == vertices[j]) vertices[j][0] += 1;
             /*
@@ -664,7 +767,51 @@ void BrainWallSolver::move() {
             }
             */
         }
+
     }
+    if (validation() == 0) {
+        std::cerr << "*** Found a pose!" << std::endl;
+        answers.push_back(make_pair(energy(true), vertices));
+    }
+
+    if (!has_opt) {
+        for (int i = 0; i < static_cast<int>(vertex_candidates.size()); i++) {
+            if (!vertex_candidates[i].empty()) {
+                std::uniform_int_distribution<> randint(0, vertex_candidates[i].size() - 1);
+                int idx = vertex_candidates[i][randint(mt)];
+                vertices[i] = hole[idx];
+            } else {
+                std::uniform_int_distribution<> randint(-10, 10);
+                vertices[i][0] += randint(mt);
+                vertices[i][0] = vertices[i][0] < 0 ? 0 : vertices[i][0];
+                vertices[i][1] += randint(mt);
+                vertices[i][1] = vertices[i][1] < 0 ? 0 : vertices[i][1];                
+            }
+        }
+#if 0
+        first_step();
+        second_step();
+        int range_vertex = 10;
+        std::uniform_int_distribution<> randint(-range_vertex, range_vertex);
+        //std::uniform_int_distribution<> randintx(hole_params[0], hole_params[1]);
+        //std::uniform_int_distribution<> randinty(hole_params[2], hole_params[3]);
+        std::vector<std::pair<double, std::vector<std::vector<int>>>> vertices_candidates;
+        auto original_vertices = vertices;
+        for (int i = 0; i < 100; i++) {
+            for (int j = 0; j < num_vertices; j++) {
+                vertices[j][0] += randint(mt);
+                vertices[j][0] = vertices[j][0] < 0 ? 0 : vertices[j][0];
+                vertices[j][1] += randint(mt);
+                vertices[j][1] = vertices[j][1] < 0 ? 0 : vertices[j][1];
+            }
+            vertices_candidates.push_back(std::make_pair(energy(true), vertices));
+            vertices = original_vertices;
+        }
+        std::sort(vertices_candidates.begin(), vertices_candidates.end());
+        vertices = vertices_candidates.front().second;
+#endif
+    }
+
 #if 0
     double pos[2];
     double rate = 0.01;
@@ -748,16 +895,45 @@ void BrainWallSolver::print() {
 #endif
     std::cerr << "eps: " << eps << std::endl;
     std::cerr << "Invalid count: " << validation() << std::endl;
+    std::cerr << "num_answers: " << answers.size() << std::endl;
 }
 
 void BrainWallSolver::output() {
-    //for (const auto& vertex : vertices) {
-    for (int i = 0; i < num_vertices; i++) {
-        std::cout << vertices[i][0] << " " << vertices[i][1] << std::endl;
+    if (!answers.empty()) {
+        std::sort(answers.begin(), answers.end());
+        auto ans = answers.front().second;
+        for (int i = 0; i < num_vertices; i++) {
+            std::cout << ans[i][0] << " " << ans[i][1] << std::endl;
+        }
     }
 }
 
-void BrainWallSolver::output_json(std::string fname) {
+void BrainWallSolver::output_json(bool has_last) {
+    if (!answers.empty()) {
+        std::sort(answers.begin(), answers.end());
+        for (int i = 0; i < 5 && i < static_cast<int>(answers.size()); i++) {
+            auto ans = answers[i].second;
+            std::stringstream ss;
+            ss << "best" << i + 1 << ".json";
+            std::fstream fs(ss.str(), std::ios_base::out);
+            fs << "{\"vertices\": [";
+            for (int i = 0; i < num_vertices; i++) {
+                fs << "[" << ans[i][0] << "," << ans[i][1] << "]" << (i < num_vertices - 1 ? "," : "");
+            }
+            fs << "]}" << std::endl;
+            fs.close();
+        }
+    }
+    if (has_last) {
+        std::fstream fs("last.json", std::ios_base::out);
+        fs << "{\"vertices\": [";
+        for (int i = 0; i < num_vertices; i++) {
+            fs << "[" << vertices[i][0] << "," << vertices[i][1] << "]" << (i < num_vertices - 1 ? "," : "");
+        }
+        fs << "]}" << std::endl;
+        fs.close();
+    }
+#if 0
     std::fstream fs(fname, std::ios_base::out);
     fs << "{\"vertices\": [";
     for (int i = 0; i < num_vertices; i++) {
@@ -765,6 +941,7 @@ void BrainWallSolver::output_json(std::string fname) {
     }
     fs << "]}" << std::endl;
     fs.close();
+#endif
 }
 
 void BrainWallSolver::run() {
@@ -779,12 +956,17 @@ void BrainWallSolver::run() {
             return time_limit - elapsed_time > 0.0;
         })) {
     //for (int i = 0; i < num_iters; i++) {
-        calc();
+        //calc();
         move();
         std::cerr << "Energy (" << std::setw(7) << i + 1 << "): ";
         //std::cerr << std::fixed << std::setw(15) << std::setprecision(5) << energy() << std::endl;
         std::cerr << std::fixed << std::setw(15) << std::setprecision(5) << energy() << std::endl;
-        if (validation() == 0) break;
+    #if 0
+        if (validation() == 0) {
+            answers.push_back(make_pair(energy(true), vertices));
+            //break;
+        }
+    #endif
     }
 }
 
@@ -809,10 +991,8 @@ int main(int argc, char** argv) {
     solver.print();
     solver.run();
     solver.print();
-    if (solver.validation() == 0) {
-        solver.output();
-    }
-    solver.output_json("test.json");
+    solver.output();
+    solver.output_json(true);
 
     return 0;
 }

@@ -4,6 +4,7 @@ import json
 import argparse
 import subprocess
 import requests
+from multiprocessing import Pool
 from evaluate import evaluate
 
 ENDPOINT = 'https://icfpc.logicmachine.jp'
@@ -40,12 +41,15 @@ def problem2text(json_str):
     if 'globalist' in obj and obj['globalist']:
         lines.append('1')
         lines.append('GLOBALIST')
-    elif 'break_a_leg' in obj and obj['break_a_leg']:
+    elif 'break_leg' in obj and obj['break_leg']:
         lines.append('1')
         lines.append('BREAK_A_LEG')
     elif 'wallhack' in obj and obj['wallhack']:
         lines.append('1')
         lines.append('WALLHACK')
+    elif 'superflex' in obj and obj['superflex']:
+        lines.append('1')
+        lines.append('SUPERFLEX')
     else:
         lines.append('0')
     return '\n'.join(lines)
@@ -116,17 +120,36 @@ def run(problem_id, solver_name, dry_run, args):
         ret = submit_solution(problem_id, solution)
     print(problem_id, ret)
 
+def run_multiprocessing(args):
+    run(args['id'], args['name'], args['dry'], args['remains'])
+
 
 def main():
     parser = argparse.ArgumentParser(description='Solver runner')
-    # parser.add_argument('--serial', '-s', action='store_true', help='use serial runner')
+    parser.add_argument('--parallel', '-p', action='store_true', help='use parallel runner')
     parser.add_argument('--name', '-n', required=True, help='solver name')
+    parser.add_argument('--single', '-s', help='problem id')
     parser.add_argument('--dry', '-d', action='store_true', help='do not submit')
     args, remains = parser.parse_known_args()
 
-    problems = fetch_problem_list()
-    for problem in problems:
-        run(problem['id'], args.name, args.dry, remains)
+    if args.single is not None:
+        run(args.single, args.name, args.dry, remains)
+    elif args.parallel:
+        problems = fetch_problem_list()
+        tasks = []
+        for p in problems:
+            tasks.append({
+                'id': p['id'],
+                'name': args.name,
+                'dry': args.dry,
+                'remains': remains
+            })
+        p = Pool()
+        p.map(run_multiprocessing, tasks)
+    else:
+        problems = fetch_problem_list()
+        for problem in problems:
+            run(problem['id'], args.name, args.dry, remains)
 
 if __name__ == '__main__':
     main()
