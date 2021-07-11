@@ -20,6 +20,7 @@ def main():
         hole     = len(body['hole'])
         edges    = len(body['figure']['edges'])
         vertices = len(body['figure']['vertices'])
+        body['globalist'] = False
         body['break_leg'] = False
         body['wallhack']  = False
         # plain
@@ -31,7 +32,7 @@ def main():
             ''',
             (key, key, hole, edges, vertices, json.dumps(body)))
         # globalist
-        body['epsilon'] *= len(body['figure']['edges'])
+        body['globalist'] = True
         cur.execute(
             '''
             insert or ignore into problems
@@ -39,7 +40,7 @@ def main():
                 values (?, ?, 1, 0, ?, ?, ?, ?)
             ''',
             (key + GLOBALIST_OFFSET, key, hole, edges, vertices, json.dumps(body)))
-        body['epsilon'] //= len(body['figure']['edges'])
+        body['globalist'] = False
         # break-a-leg
         body['break_leg'] = True
         cur.execute(
