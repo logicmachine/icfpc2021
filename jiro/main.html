@@ -195,7 +195,8 @@
               }
 
               document.addEventListener("copy", function(e){
-                  let ans = ""
+                  let ans = '{'
+                  ans += '"vertices": ['
                   for(let i = 0; i < V.length; i++){
                     let x = V[i].position.x
                     let y = V[i].position.y
@@ -203,12 +204,16 @@
                     y -= y_origin
                     x /= x_scale
                     y /= y_scale
-                    ans += x + " " + y + "\n"
+                    ans += "[" + x + "," + y + "]"
+                    if(i != V.length - 1){
+                      ans += ","
+                    }
                   }
+                  ans += "]}"
                   e.clipboardData.setData("text/plain" , ans);    
                   // 本来のイベントをキャンセル
                   e.preventDefault();
-                  alert("各点の座標をコピーしました")
+                  alert("各点の座標をjson形式でコピーしました")
               });
               document.onkeydown = function(e) {
                   let move_ok
