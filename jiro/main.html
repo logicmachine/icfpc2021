@@ -359,7 +359,6 @@
                 }
                 score.innerHTML = 'score:' + sum
 
-                const threshold = eps / 1000000
                 //長さの制約
                 for(let i = 0; i < E.length; i++){
                   let d = dist(E[i].bodyA.position, E[i].bodyB.position)
@@ -367,10 +366,10 @@
                   let color = 'black'
                   let line_width = 1
                   let diff = d/constraint_d - 1
-                  if(diff > threshold){
+                  if((d - constraint_d) * 1000000 > eps * constraint_d){
                     color = 'red'
                     line_width = 5
-                  }else if(diff < -threshold){
+                  }else if((d - constraint_d) * 1000000 < -eps * constraint_d){
                     color = 'blue'
                     line_width = 5
                   }
