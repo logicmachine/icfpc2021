@@ -125,6 +125,7 @@ constexpr double pi = 3.14159265358979323846264338327950;
 double vertex_out_of_bound_penalty_factor = 1e6;
 double edge_out_of_bound_penalty_factor = 1e6;
 double edge_distance_penalty_factor = 1e6;
+double integer_penalty_factor = 1e-100;
 
 // 三角形pabの角度
 double point_to_line_angle(pair<double, double> p, pair<double, double> a, pair<double, double> b) {
@@ -222,6 +223,11 @@ double calc_score() {
         score += (abs(dist / original_distance[v][u] - 1) - eps * 1e-6) * edge_distance_penalty_factor; // penalty
       }
     }
+
+    // check for near-integer
+    double fx = abs(vertex[v].first - round(vertex[v].first));
+    double fy = abs(vertex[v].second - round(vertex[v].second));
+    score += (fx + fy) * integer_penalty_factor;
   }
 
   // calculate dislikes
@@ -279,6 +285,11 @@ double calc_vertex_score(int v) {
     }
   }
 
+  // check for near-integer
+  double fx = abs(vertex[v].first - round(vertex[v].first));
+  double fy = abs(vertex[v].second - round(vertex[v].second));
+  score += (fx + fy) * integer_penalty_factor;
+
   // calculate dislikes
   for (int i = 0; i < h; i++) {
     double dislikes = 1e300;
@@ -326,6 +337,10 @@ void solve() {
 
   last_vertex = vertex;
 
+  eps *= 0.1;
+
+  theRandom.x = (ll) random_device()() << 32 | (ll) random_device()();
+
   // optimization
   {
     double score = calc_score();
@@ -334,8 +349,8 @@ void solve() {
 
     double base_temperature = 1.0e6;
     double temperature = base_temperature;
-    double decay_rate = 4.0e-6;
-    double time_limit = 99.950;
+    double decay_rate = 4.0e-5;
+    double time_limit = 9.950;
     int iter_count = 0;
 
     theTimer.restart();
@@ -344,8 +359,8 @@ void solve() {
       double roll = theRandom.nextDouble();
       if (roll < 0.20) {
         int v = theRandom.nextUIntMod(n);
-        double dx = theRandom.nextDouble() * 0.2 - 0.1;
-        double dy = theRandom.nextDouble() * 0.2 - 0.1;
+        double dx = theRandom.nextDouble() * 4.0 - 2.0;
+        double dy = theRandom.nextDouble() * 4.0 - 2.0;
 
         score -= calc_vertex_score(v);
         vertex[v].first += dx;
@@ -374,8 +389,8 @@ void solve() {
       }
       else if (roll < 1.00) {
         for (int v = 0; v < n; v++) {
-          double dx = theRandom.nextDouble() * 0.2 - 0.1;
-          double dy = theRandom.nextDouble() * 0.2 - 0.1;
+          double dx = theRandom.nextDouble() * 4.0 - 2.0;
+          double dy = theRandom.nextDouble() * 4.0 - 2.0;
 
           vertex[v].first += dx;
           vertex[v].second += dy;
@@ -421,7 +436,9 @@ void solve() {
   }
   vertex_out_of_bound_penalty_factor = 1e9;
   edge_out_of_bound_penalty_factor = 1e9;
-  edge_distance_penalty_factor = 1e9;
+  edge_distance_penalty_factor = 1e6;
+
+  ans = vertex;
 
   {
     double score = calc_score();
@@ -430,8 +447,8 @@ void solve() {
 
     double base_temperature = 1.0e3;
     double temperature = base_temperature;
-    double decay_rate = 1.0e-6;
-    double time_limit = 59.950;
+    double decay_rate = 4.0e-6;
+    double time_limit = 9.950;
     int iter_count = 0;
 
     theTimer.restart();
@@ -457,6 +474,7 @@ void solve() {
           last_score = score;
           last_vertex = vertex;
           if (score < best_score) {
+            ans = vertex;
             best_score = score;
           }
         }
@@ -469,10 +487,41 @@ void solve() {
           score = last_score;
         }
       }
-      else if (roll < 1.00) {
+      else if (roll < 0.50) {
+        int v = theRandom.nextUIntMod(n);
+        double dx = theRandom.nextUIntMod(11) - 5;
+        double dy = theRandom.nextUIntMod(11) - 5;
+
+        vertex[v].first += dx;
+        vertex[v].second += dy;
+        score = calc_score();
+
+        #ifdef DEBUG
+        if (iter_count % 100000 == 0) cerr << iter_count << " " << score << " " << last_score << " " << best_score << " " << temperature << " " << theTimer.time() << endl;
+        #endif
+
+        if (score <= last_score) {
+          last_score = score;
+          last_vertex = vertex;
+          if (score < best_score) {
+            ans = vertex;
+            best_score = score;
+          }
+        }
+        else if (theRandom.nextDouble() < exp(double(last_score - score) / temperature)) { // accept
+          last_score = score;
+          last_vertex = vertex;
+        }
+        else { // rollback
+          vertex[v].first -= dx;
+          vertex[v].second -= dy;
+          score = last_score;
+        }
+      }
+      else if (roll < 0.90) {
         for (int v = 0; v < n; v++) {
-          double dx = theRandom.nextUIntMod(21) - 10;
-          double dy = theRandom.nextUIntMod(21) - 10;
+          double dx = theRandom.nextUIntMod(3) - 1;
+          double dy = theRandom.nextUIntMod(3) - 1;
 
           vertex[v].first += dx;
           vertex[v].second += dy;
@@ -488,6 +537,7 @@ void solve() {
           last_score = score;
           last_vertex = vertex;
           if (score < best_score) {
+            ans = vertex;
             best_score = score;
           }
         }
@@ -499,6 +549,44 @@ void solve() {
           vertex = last_vertex;
           score = last_score;
         }
+      }
+      else if (roll < 1.00) {
+        double dx = theRandom.nextUIntMod(11) - 5;
+        double dy = theRandom.nextUIntMod(11) - 5;
+
+        for (int v = 0; v < n; v++) {
+          vertex[v].first += dx;
+          vertex[v].second += dy;
+        }
+
+        score = calc_score();
+
+        #ifdef DEBUG
+        if (iter_count % 100000 == 0) cerr << iter_count << " " << score << " " << last_score << " " << best_score << " " << temperature << " " << theTimer.time() << endl;
+        #endif
+
+        if (score <= last_score) {
+          last_score = score;
+          last_vertex = vertex;
+          if (score < best_score) {
+            ans = vertex;
+            best_score = score;
+          }
+        }
+        else if (theRandom.nextDouble() < exp(double(last_score - score) / temperature)) { // accept
+          last_score = score;
+          last_vertex = vertex;
+        }
+        else { // rollback
+          vertex = last_vertex;
+          score = last_score;
+        }
+      }
+
+      if (theRandom.nextDouble() < 1e-4) { // restore best
+        vertex = ans;
+        score = best_score;
+        last_score = best_score;
       }
 
       iter_count++;
@@ -521,8 +609,6 @@ void solve() {
     }
     cerr << d << endl;
   }
-
-  ans = vertex;
 }
 
 int main() {
