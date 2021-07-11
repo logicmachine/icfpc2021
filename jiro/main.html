@@ -252,7 +252,26 @@
                   //5倍
                   let ctrl_key = key_event.ctrlKey || key_event.metaKey
                   console.log(ctrl_key)
-                  if(e.keyCode == 65){//a
+                  if(e.keyCode == 73){//i
+                    let cx = mouse.position.x
+                    let cy = mouse.position.y
+                    if(cx%x_scale >= x_scale/2){
+                      cx = (cx - cx%x_scale + x_scale) | 0
+                    }else{
+                      cx = (cx - cx%x_scale) | 0
+                    }
+                    if(cy%y_scale >= y_scale/2){
+                      cy = (cy - cy%y_scale + y_scale) | 0
+                    }else{
+                      cy = (cy - cy%y_scale) | 0
+                    }
+                    for(let i = 0; i < V.length; i++){
+                      V[i].position.y = 2 * cy - V[i].position.y
+                    }
+                    return
+                  }else if(e.keyCode == 82){//r
+
+                  }else if(e.keyCode == 65){//a
                     move_ok = true
                     console.log("active")
                   }else if(e.keyCode == 83){//s
