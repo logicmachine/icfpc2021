@@ -335,13 +335,17 @@
                   let d = dist(E[i].bodyA.position, E[i].bodyB.position)
                   let constraint_d = constraint_dists[i]
                   let color = 'black'
+                  let line_width = 1
                   let diff = d/constraint_d - 1
                   if(diff > threshold){
                     color = 'red'
+                    line_width = 5
                   }else if(diff < -threshold){
                     color = 'blue'
+                    line_width = 5
                   }
                   E[i].render.strokeStyle = color
+                  E[i].render.lineWidth = line_width
                 }
               }
               setInterval(update, 100)
