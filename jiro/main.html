@@ -17,27 +17,50 @@
           <input type="file" id="json_file"/>
         </form>
         <canvas id="canvas" style="z-index:2"></canvas>
-        <canvas id="overlay" width="800" height="600" style="z-index:1; pointer-events: none;"></canvas>
+        <canvas id="overlay" width="800" height="800" style="z-index:1; pointer-events: none;"></canvas>
         <script src="./js/matter.min.js"></script>
         <script>
           let dist = function(xy1, xy2){
             return (xy1.x - xy2.x) * (xy1.x - xy2.x) + (xy1.y - xy2.y) * (xy1.y - xy2.y)
-          }
-          const x_scale = 6
-          const y_scale = x_scale
-          const x_origin = 0
-          const y_origin = 0
-          if(x_origin%x_scale != 0){
-            alert('x_origin%x_scale=0にしてください')
-          }
-          if(y_origin%y_scale != 0){
-            alert('y_origin%y_scale=0にしてください')
           }
           const width = 800
           const height = 800
           let eps
           let constraint_dists = []
           func = function(input) {
+              let x_scale, y_scale
+              {
+                let l = 1000000000
+                let r = 0
+                let u = 1000000000
+                let d = 0
+                for(let i = 0; i < input.hole.length; i++){
+                  let x = input.hole[i][0]
+                  if(x < l){
+                    l = x
+                  }
+                  if(r < x){
+                    r = x
+                  }
+                  let y = input.hole[i][1]
+                  if(y < u){
+                    u = y
+                  }
+                  if(d < y){
+                    d = y
+                  }
+                }
+                x_scale = Math.min((width/(r))|0, (height/(d))|0)
+                y_scale = x_scale
+              }
+              const x_origin = 0
+              const y_origin = 0
+              if(x_origin%x_scale != 0){
+                alert('x_origin%x_scale=0にしてください')
+              }
+              if(y_origin%y_scale != 0){
+                alert('y_origin%y_scale=0にしてください')
+              }
               var Engine = Matter.Engine,
                   Render = Matter.Render,
                   Runner = Matter.Runner,
@@ -96,7 +119,7 @@
                     angle += Math.PI
                   }
                 }
-                hole_line_width = 10
+                hole_line_width = 2
                 let body = Bodies.rectangle(xc,yc,len,hole_line_width, {isStatic: true, angle: angle, density:1, collisionFilter:{category:1, mask:8}})
                 dy = -(x2 - x1) / len
                 dx = (y2 - y1) / len
