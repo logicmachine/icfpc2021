@@ -16,8 +16,9 @@
         <form id="json_form">
           <input type="file" id="json_file"/>
         </form>
-        <canvas id="canvas" style="z-index:2"></canvas>
+        <canvas id="canvas" style="z-index:3"></canvas>
         <canvas id="overlay" width="1200" height="1200" style="z-index:1; pointer-events: none; opacity: 1;"></canvas>
+        <canvas id="scorelay" width="1200" height="1200" style="z-index:2; pointer-events: none; opacity: 1;"></canvas>
         <script src="./js/matter.min.js"></script>
         <script>
           let dist = function(xy1, xy2){
@@ -79,6 +80,7 @@
 
               var canvas = document.getElementById('canvas')
               var overlay = document.getElementById('overlay')
+              var scorelay = document.getElementById('overlay')
 
               // create renderer
               render = Render.create({
@@ -305,6 +307,8 @@
               update = function(){
                 //score
                 let sum = 0
+                let ctx = scorelay.getContext('2d')
+                ctx.clearRect(0,0,width,height)
                 for(let i = 0; i < holes.length; i++){
                   let x1 = holes[i][0]
                   let y1 = holes[i][1]
@@ -320,6 +324,8 @@
                     }
                   }
                   sum += min_dist
+                  ctx.font = '24px serif'
+                  ctx.fillText(min_dist | 0, (x1+2) * x_scale + x_origin, (y1+2) * y_scale + y_origin)
                 }
                 score.innerHTML = 'score:' + sum
 
