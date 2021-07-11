@@ -275,11 +275,11 @@
 
                   V[best_vi].isStatic = !move_ok
                   if(move_ok){
-                    V[best_vi].render.fillStyle = 'white'
-                    V[best_vi].render.strokeStyle = 'white'
+                    V[best_vi].render.fillStyle = 'black'
+                    V[best_vi].render.strokeStyle = 'black'
                   }else{
-                    V[best_vi].render.fillStyle = 'red'
-                    V[best_vi].render.strokeStyle = 'red'
+                    V[best_vi].render.fillStyle = 'green'
+                    V[best_vi].render.strokeStyle = 'green'
                     let x = V[best_vi].position.x
                     let y = V[best_vi].position.y
                     if(x%x_scale >= x_scale/2){
@@ -328,7 +328,7 @@
                 for(let i = 0; i < E.length; i++){
                   let d = dist(E[i].bodyA.position, E[i].bodyB.position)
                   let constraint_d = constraint_dists[i]
-                  let color = 'white'
+                  let color = 'black'
                   let diff = d/constraint_d - 1
                   if(diff > threshold){
                     color = 'red'
