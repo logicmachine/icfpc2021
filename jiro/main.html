@@ -14,12 +14,23 @@
         <canvas id="overlay" width="800" height="600" style="z-index:2; pointer-events: none;"></canvas>
         <script src="./js/matter.min.js"></script>
         <script>
+          let dist = function(xy1, xy2){
+            return (xy1.x - xy2.x) * (xy1.x - xy2.x) + (xy1.y - xy2.y) * (xy1.y - xy2.y)
+          }
           const x_origin = 100
           const y_origin = 100
           const x_scale = 10
-          const y_scale = 10
+          const y_scale = x_scale
+          if(x_origin%x_scale != 0){
+            alert('x_origin%x_scale=0にしてください')
+          }
+          if(y_origin%y_scale != 0){
+            alert('y_origin%y_scale=0にしてください')
+          }
           const width = 800
           const height = 600
+          let eps
+          let constraint_dists = []
           func = function(input) {
               var Engine = Matter.Engine,
                   Render = Matter.Render,
@@ -79,17 +90,15 @@
                   }
                 }
                 hole_line_width = 10
-                let body = Bodies.rectangle(xc,yc,len,hole_line_width, {isStatic: true, angle: angle, density:1})
+                let body = Bodies.rectangle(xc,yc,len,hole_line_width, {isStatic: true, angle: angle, density:1, collisionFilter:{category:1, mask:8}})
                 dy = -(x2 - x1) / len
                 dx = (y2 - y1) / len
                 // Matter.Body.translate(body, {x:0, y:100})
                 Matter.Body.translate(body, {x:hole_line_width/2 * dx, y:hole_line_width/2 * dy})
-                Composite.add(world,[
-                  body
-                ]);
                 H.push(body)
                 body['pointer-event'] = 'none'
               }
+              Composite.add(world,H);
 
               vertices = input.figure.vertices.slice()
               edges = input.figure.edges.slice()
@@ -99,7 +108,8 @@
                 const x = vertices[i][0] * x_scale + x_origin
                 const y = vertices[i][1] * y_scale + y_origin
                 const r = 4
-                const v = Bodies.circle(x, y, r, {frictionAir: 1, inertia: Infinity, render:{fillStyle:'white', strokeStyle:'white'}})
+                const v = Bodies.circle(x, y, r, {frictionAir: 1, inertia: Infinity, render:{fillStyle:'white', strokeStyle:'white'},
+                                        collisionFilter:{category:2, mask:1}})
                 V.push(v)
               }
               for(let i = 0; i < edges.length; i++){
@@ -114,13 +124,17 @@
                   pointB: {x:0, y:0},
                   render:{
                     lineWidth: 1,
-                  }
+                  },
+                  stiffness: 0.001
                 });
                 E.push(constraint)
+                constraint_dists.push(dist(v1.position, v2.position))
               }
 
               Composite.add(world, V);
               Composite.add(world, E);
+
+              eps = input.epsilon
 
               Composite.add(world, [
                   // walls
@@ -184,7 +198,7 @@
                   }
               };
           };
-          input = {"hole":[[45,80],[35,95],[5,95],[35,50],[5,5],[35,5],[95,95],[65,95],[55,80]],"epsilon":150000,"figure":{"edges":[[2,5],[5,4],[4,1],[1,0],[0,8],[8,3],[3,7],[7,11],[11,13],[13,12],[12,18],[18,19],[19,14],[14,15],[15,17],[17,16],[16,10],[10,6],[6,2],[8,12],[7,9],[9,3],[8,9],[9,12],[13,9],[9,11],[4,8],[12,14],[5,10],[10,15]],"vertices":[[20,30],[20,40],[30,95],[40,15],[40,35],[40,65],[40,95],[45,5],[45,25],[50,15],[50,70],[55,5],[55,25],[60,15],[60,35],[60,65],[60,95],[70,95],[80,30],[80,40]]}}
+          input = {"hole":[[0,7],[22,0],[36,19],[22,38],[0,31]],"epsilon":8897,"figure":{"edges":[[0,1],[0,2],[1,3],[2,4],[3,4]],"vertices":[[8,6],[26,22],[21,25],[19,0],[0,14]]}}
 
           func(input);
           document.addEventListener("copy", function(e){
@@ -237,6 +251,20 @@
               }else{
                 V[best_vi].render.fillStyle = 'red'
                 V[best_vi].render.strokeStyle = 'red'
+                let x = V[best_vi].position.x
+                let y = V[best_vi].position.y
+                if(x%x_scale >= x_scale/2){
+                  x = (x - x%x_scale + x_scale) | 0
+                }else{
+                  x = (x - x%x_scale) | 0
+                }
+                if(y%y_scale >= y_scale/2){
+                  y = (y - y%y_scale + y_scale) | 0
+                }else{
+                  y = (y - y%y_scale) | 0
+                }
+                V[best_vi].position.x = x
+                V[best_vi].position.y = y
               }
           };
           var score = document.createElement('score');
@@ -245,7 +273,8 @@
           score.innerHTML = 'score:';
           let container = document.getElementById('container')
           container.appendChild(score);
-          update_score = function(){
+          update = function(){
+            //score
             let sum = 0
             for(let i = 0; i < holes.length; i++){
               let x1 = holes[i][0]
@@ -264,8 +293,23 @@
               sum += min_dist
             }
             score.innerHTML = 'score:' + sum
+
+            const threshold = eps / 1000000
+            //長さの制約
+            for(let i = 0; i < E.length; i++){
+              let d = dist(E[i].bodyA.position, E[i].bodyB.position)
+              let constraint_d = constraint_dists[i]
+              let color = 'white'
+              let diff = d/constraint_d - 1
+              if(diff > threshold){
+                color = 'red'
+              }else if(diff < -threshold){
+                color = 'blue'
+              }
+              E[i].render.strokeStyle = color
+            }
           }
-          setInterval(update_score, 100)
+          setInterval(update, 100)
         </script>
     </body>
 </html>
