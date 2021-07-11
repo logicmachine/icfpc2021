@@ -17,14 +17,14 @@
           <input type="file" id="json_file"/>
         </form>
         <canvas id="canvas" style="z-index:2"></canvas>
-        <canvas id="overlay" width="800" height="800" style="z-index:1; pointer-events: none;"></canvas>
+        <canvas id="overlay" width="1200" height="1200" style="z-index:1; pointer-events: none; opacity: 1;"></canvas>
         <script src="./js/matter.min.js"></script>
         <script>
           let dist = function(xy1, xy2){
             return (xy1.x - xy2.x) * (xy1.x - xy2.x) + (xy1.y - xy2.y) * (xy1.y - xy2.y)
           }
-          const width = 800
-          const height = 800
+          const width = 1200
+          const height = 1200
           let eps
           let constraint_dists = []
           func = function(input) {
@@ -50,11 +50,11 @@
                     d = y
                   }
                 }
-                x_scale = Math.min((width/(r))|0, (height/(d))|0)
+                x_scale = Math.min((width/(r+2))|0, (height/(d+2))|0)
                 y_scale = x_scale
               }
-              const x_origin = 0
-              const y_origin = 0
+              const x_origin = x_scale
+              const y_origin = y_scale
               if(x_origin%x_scale != 0){
                 alert('x_origin%x_scale=0にしてください')
               }
@@ -137,8 +137,8 @@
               for(let i = 0; i < vertices.length; i++){
                 const x = vertices[i][0] * x_scale + x_origin
                 const y = vertices[i][1] * y_scale + y_origin
-                const r = 4
-                const v = Bodies.circle(x, y, r, {frictionAir: 1, inertia: Infinity, render:{fillStyle:'white', strokeStyle:'white'},
+                const r = 10
+                const v = Bodies.circle(x, y, r, {frictionAir: 1, inertia: Infinity, render:{fillStyle:'black', strokeStyle:'black'},
                                         collisionFilter:{category:2, mask:1}})
                 V.push(v)
               }
@@ -201,15 +201,16 @@
 
               //grid線を書く
               let context = overlay.getContext('2d')
-              context.linewidth = 1;
-              for(let i = 0; i < height; i+=y_scale){
+              context.lineWidth = 0.1;
+              // context.
+              for(let i = y_origin; i < height; i+=y_scale){
                 context.beginPath();
                 context.moveTo(0,i);
                 context.lineTo(width,i);
                 context.closePath();
                 context.stroke();
               }
-              for(let j = 0; j < width; j+=x_scale){
+              for(let j = x_origin; j < width; j+=x_scale){
                 context.beginPath();
                 context.moveTo(j,0);
                 context.lineTo(j,height);
@@ -246,6 +247,13 @@
                   }else if(e.keyCode == 83){//s
                     move_ok = false;
                     console.log("stop")
+                  }else if(e.keyCode == 71){//g
+                    if(overlay.style.opacity == 1){
+                      overlay.style.opacity = 0
+                    }else{
+                      overlay.style.opacity = 1
+                    }
+                    return
                   }else{
                     console.log(e.keyCode)
                     return
