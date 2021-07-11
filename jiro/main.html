@@ -28,6 +28,8 @@
           const height = 1200
           let eps
           let constraint_dists = []
+          var shift_key = false
+          var command_key = false
           func = function(input) {
               let x_scale, y_scale
               {
@@ -80,7 +82,7 @@
 
               var canvas = document.getElementById('canvas')
               var overlay = document.getElementById('overlay')
-              var scorelay = document.getElementById('overlay')
+              var scorelay = document.getElementById('scorelay')
 
               // create renderer
               render = Render.create({
@@ -98,6 +100,7 @@
 
               Render.run(render);
               canvas.style.backgroundColor = 'transparent'
+              scorelay.style.backgroundColor = 'transparent'
 
               // create runner
               var runner = Runner.create();
@@ -243,6 +246,12 @@
               });
               document.onkeydown = function(e) {
                   let move_ok
+                  var key_event = e || window.event
+                  //全体
+                  let shift_key = key_event.shiftKey
+                  //5倍
+                  let ctrl_key = key_event.ctrlKey || key_event.metaKey
+                  console.log(ctrl_key)
                   if(e.keyCode == 65){//a
                     move_ok = true
                     console.log("active")
@@ -262,13 +271,24 @@
                     let dx = 0
                     let dy = 0
                     if(e.keyCode == 37){
-                      dx = -1
+                      dx = -x_scale
                     }else if(e.keyCode == 38){
-                      dy = -1
+                      dy = -y_scale
                     }else if(e.keyCode == 39){
-                      dx = 1
+                      dx = x_scale
                     }else{
-                      dy = 1
+                      dy = y_scale
+                    }
+                    if(ctrl_key){
+                      dx *= 5
+                      dy *= 5
+                    }
+                    if(shift_key){
+                      for(let i = 0; i < V.length; i++){
+                        V[i].position.x += dx;
+                        V[i].position.y += dy;
+                      }
+                      return
                     }
                     let x1 = mouse.position.x
                     let y1 = mouse.position.y
@@ -291,6 +311,34 @@
                     return
                   }
                   e.preventDefault();//規定の動作をキャンセル
+
+                  if(shift_key){
+                    for(let vi = 0; vi < V.length; vi++){
+                      V[vi].isStatic = !move_ok
+                      if(move_ok){
+                        V[vi].render.fillStyle = 'black'
+                        V[vi].render.strokeStyle = 'black'
+                      }else{
+                        V[vi].render.fillStyle = 'green'
+                        V[vi].render.strokeStyle = 'green'
+                        let x = V[vi].position.x
+                        let y = V[vi].position.y
+                        if(x%x_scale >= x_scale/2){
+                          x = (x - x%x_scale + x_scale) | 0
+                        }else{
+                          x = (x - x%x_scale) | 0
+                        }
+                        if(y%y_scale >= y_scale/2){
+                          y = (y - y%y_scale + y_scale) | 0
+                        }else{
+                          y = (y - y%y_scale) | 0
+                        }
+                        V[vi].position.x = x
+                        V[vi].position.y = y
+                      }
+                    }
+                    return
+                  }
                   let x1 = mouse.position.x
                   let y1 = mouse.position.y
                   let best_vi = 0
