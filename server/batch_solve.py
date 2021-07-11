@@ -18,32 +18,59 @@ API_HEADERS = {
 def problem2text(json_str):
     obj = json.loads(json_str)
     lines = []
+    # Hole
     hole = obj['hole']
     lines.append('{}'.format(len(hole)))
     for p in hole:
         lines.append('{} {}'.format(p[0], p[1]))
+    # Figure
     figure = obj['figure']
     lines.append('{} {}'.format(len(figure['vertices']), len(figure['edges'])))
     for p in figure['vertices']:
         lines.append('{} {}'.format(p[0], p[1]))
     for e in figure['edges']:
         lines.append('{} {}'.format(e[0], e[1]))
+    # Epsilon
     lines.append('{}'.format(obj['epsilon']))
+    # Bonuses
+    lines.append('{}'.format(len(obj['bonuses'])))
+    for b in obj['bonuses']:
+        lines.append('{} {} {} {}'.format(b['bonus'], b['problem'], b['position'][0], b['position'][1]))
+    # Flags
+    if 'break_a_leg' in obj and obj['break_a_leg']:
+        lines.append('1')
+        lines.append('BREAK_A_LEG')
+    elif 'wallhack' in obj and obj['wallhack']:
+        lines.append('1')
+        lines.append('WALLHACK')
+    else:
+        lines.append('0')
     return '\n'.join(lines)
 
 def text2solution(text):
     vertices = []
+    bonuses = []
     for line in text.split('\n'):
         if line == '':
             continue
+        tokens = line.strip().split()
+        if tokens[0] == 'BREAK_A_LEG':
+            bonuses.append({
+                'bonus': tokens[0],
+                'edge': [int(tokens[1]), int(tokens[2])]
+            })
+            continue
+        elif tokens[0] == 'WALLHACK':
+            bonuses.append({ 'bonus': tokens[0] })
+            continue
         row = []
-        for token in line.split():
+        for token in tokens:
             if re.match(r'^\d+$', token):
                 row.append(int(token))
             else:
                 row.append(token)
         vertices.append(row)
-    return { 'vertices': vertices }
+    return { 'vertices': vertices, 'bonuses': bonuses }
 
 def fetch_problem_list():
     r = requests.get(ENDPOINT + '/api/problems', headers=API_HEADERS)
