@@ -13,10 +13,7 @@ def main():
     json_obj['wallhack'] = False
     for b in sys.argv[2:]:
         t = b.lower()
-        if t == 'globalist':
-            json_obj['epsilon'] *= len(json_obj['figure']['edges'])
-        else:
-            json_obj[t] = True
+        json_obj[t] = True
 
     print(problem2text(json.dumps(json_obj)))
 
