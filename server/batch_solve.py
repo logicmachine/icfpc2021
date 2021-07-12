@@ -132,19 +132,38 @@ def main():
     parser.add_argument('--dry', '-d', action='store_true', help='do not submit')
     args, remains = parser.parse_known_args()
 
+    targets = {120}
+
     if args.single is not None:
         run(args.single, args.name, args.dry, remains)
     elif args.parallel:
         problems = fetch_problem_list()
         tasks = []
         for p in problems:
-            if p['best_dislikes'] != 0:
+            if p['best_dislikes'] != 0 and p['id'] in targets:
                 tasks.append({
                     'id': p['id'],
                     'name': args.name,
                     'dry': args.dry,
                     'remains': remains
                 })
+        tasks = tasks + tasks
+        tasks = tasks + tasks
+        tasks = tasks + tasks
+        tasks = tasks + tasks
+        tasks = tasks + tasks
+        tasks = tasks + tasks
+        tasks = tasks + tasks
+        tasks = tasks + tasks
+        tasks = tasks + tasks
+        tasks = tasks + tasks
+        tasks = tasks + tasks
+        tasks = tasks + tasks
+        tasks = tasks + tasks
+        tasks = tasks + tasks
+        tasks = tasks + tasks
+        tasks = tasks + tasks
+        tasks = tasks + tasks
         p = Pool()
         p.map(run_multiprocessing, tasks)
     else:
