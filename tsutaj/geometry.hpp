@@ -1,3 +1,6 @@
+#ifndef __GEOMETRY_HPP__
+#define __GEOMETRY_HPP__
+
 /***** 基本的準備 *****/
 
 // xy平面上の点(ベクトル)を表現するには、complex型を利用するとよい
@@ -580,3 +583,5 @@ Point rotatePoint(Point a, Point b, double z) {
     Point ret(rx, ry); ret += a;
     return ret;
 }
+
+#endif // !__GEOMETRY_HPP__
