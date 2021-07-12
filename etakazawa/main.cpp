@@ -17,54 +17,6 @@ typedef complex<ldouble> P;
 using point = P;
 using polygon = vector<P>;
 
-template < class BidirectionalIterator >
-bool next_combination ( BidirectionalIterator first1 ,
-  BidirectionalIterator last1 ,
-  BidirectionalIterator first2 ,
-  BidirectionalIterator last2 )
-{
-  if (( first1 == last1 ) || ( first2 == last2 )) {
-    return false ;
-  }
-  BidirectionalIterator m1 = last1 ;
-  BidirectionalIterator m2 = last2 ; --m2;
-  while (--m1 != first1 && !(* m1 < *m2 )){
-  }
-  bool result = (m1 == first1 ) && !(* first1 < *m2 );
-  if (! result ) {
-    // ①
-    while ( first2 != m2 && !(* m1 < * first2 )) {
-      ++ first2 ;
-    }
-    first1 = m1;
-    std :: iter_swap (first1 , first2 );
-    ++ first1 ;
-    ++ first2 ;
-  }
-  if (( first1 != last1 ) && ( first2 != last2 )) {
-    // ②
-    m1 = last1 ; m2 = first2 ;
-    while (( m1 != first1 ) && (m2 != last2 )) {
-      std :: iter_swap (--m1 , m2 );
-      ++ m2;
-    }
-    // ③
-    std :: reverse (first1 , m1 );
-    std :: reverse (first1 , last1 );
-    std :: reverse (m2 , last2 );
-    std :: reverse (first2 , last2 );
-  }
-  return ! result ;
-}
-template < class BidirectionalIterator >
-bool next_combination ( BidirectionalIterator first ,
-  BidirectionalIterator middle ,
-  BidirectionalIterator last )
-{
-  return next_combination (first , middle , middle , last );
-}
-
-
 namespace std {
   bool operator < (const P& a, const P& b) {
     return real(a) != real(b) ? real(a) < real(b) : imag(a) < imag(b);
@@ -117,7 +69,6 @@ bool intersectSS(const L &s, const L &t) {
   return ccw(s[0],s[1],t[0])*ccw(s[0],s[1],t[1]) <= 0 &&
          ccw(t[0],t[1],s[0])*ccw(t[0],t[1],s[1]) <= 0;
 }
-// 交差している場合true (重なっている場合はfalse, 1点のみ接している場合はfalse)
 bool intersectStrictlySS(const L &s, const L &t) {
   bool is_same_endpoint = (s[0] == t[0] || s[0] == t[1] || s[1] == t[0] || s[1] == t[1]);
   is_same_endpoint &= !((s[0] == t[0] && s[1] == t[0]) || (s[0] == t[1] && s[1] == t[0]));
@@ -176,7 +127,6 @@ int contains(const polygon& P, const point& p) {
   }
   return in ? IN : OUT;
 }
-// centerを中心にsrcをtheta分回転
 P rotate(const P& center, const P& src, double theta) {
   P p(cos(theta), sin(theta));
   return p * (src - center) + center;
@@ -200,7 +150,7 @@ void OutputJson(const vector<P>& pose) {
   cout << "]}" << endl;
 }
 
-// 点pとholesの頂点の中で一番近い点との距離
+// Calculate the distance between the point p and the vertex of the nearest a hole.
 double nearesetDistance(const P &p, const polygon& holes_poly) {
   ldouble min_d = 1e9;
   for (const auto& hole : holes_poly) {
@@ -208,7 +158,7 @@ double nearesetDistance(const P &p, const polygon& holes_poly) {
   }
   return min_d;
 }
-// 点pとholesの頂点の平均距離
+// Calculate the average distance between the point p and the vertex of the holes.
 double averageDistance(const P &p, const polygon& holes_poly) {
   ldouble sum_d = 0;
   for (const auto& hole : holes_poly) {
@@ -216,28 +166,27 @@ double averageDistance(const P &p, const polygon& holes_poly) {
   }
   return sum_d / holes_poly.size();
 }
-// dislikesの計算
+// Calc dislikes
+// fixed: Determined vertices
 double calcDislikes(const vector<P>& pose, const vector<int>& fixed, const polygon& holes_poly) {
   double dislike = 0;
   for (const auto& hole : holes_poly) {
     ldouble min_d = 1e9;
     for (int i = 0; i < pose.size(); i++) {
       const auto& p = pose[i];
-      // 決定済みのもののみ計算
       if (fixed[i]) min_d = min(min_d, distanceSqurePP(p, hole));
     }
     dislike += min_d;
   }
   return dislike;
 }
-// 評価値の計算
+// Calculate evaluation
 double calcEvaluation(const vector<P>& pose, const vector<int>& fixed, const polygon& holes_poly) {
   double dislike = 0;
   for (const auto& hole : holes_poly) {
     ldouble min_d = 1e9;
     for (int i = 0; i < pose.size(); i++) {
       const auto& p = pose[i];
-      // 決定済みのもののみ計算
       if (fixed[i]) min_d = min(min_d, distanceSqurePP(p, hole));
     }
     dislike += min_d;
@@ -254,7 +203,7 @@ bool isIntersectPoly(const polygon& holes_poly, const P& p1, const P& p2) {
   return false;
 }
 
-// 新たに点を追加する時に制約を満たすか確認
+// Check if the newly added points meet the constraints
 bool isValidAddPointToPose(const P& p, const int id,
                            const vector<P>& pose,
                            const vector<int>& fixed,
@@ -263,19 +212,19 @@ bool isValidAddPointToPose(const P& p, const int id,
                            const polygon& holes_poly,
                            const int eps) {
   int x = (int)real(p), y = (int)imag(p);
-  if (!in_holes_map[y][x]) return false; // 領域内でないと駄目
+  if (!in_holes_map[y][x]) return false; // in hole
 
-  // 接続している点について
+  // For each adjcent vertex
   for (const auto& edge : edges[id]) {
     if (!fixed[edge.to]) continue;
-    const auto& adjp = pose[edge.to]; // 隣接点
-    ldouble diff = abs(distanceSqurePP(p, adjp) / edge.distance - 1); // 元々の距離と今の点から隣接点の距離
+    const auto& adjp = pose[edge.to]; // adjcent vertex
+    ldouble diff = abs(distanceSqurePP(p, adjp) / edge.distance - 1);
 
     // cerr << id << " " << edge.to << " : " << diff << " <= " << eps / 1000000. << " ";
     // cerr << p << " - " << adjp << " = " << distanceSqurePP(p, adjp) << " / " << edge.distance << endl;
     // if (isIntersectPoly(holes_poly, p, adjp)) cerr << "intersect fail." << endl;
     if (diff > eps / 1000000.) return false;
-    if (isIntersectPoly(holes_poly, p, adjp)) return false; // 交差している場合駄目
+    if (isIntersectPoly(holes_poly, p, adjp)) return false; // intersect is ng
   }
   return true;
 }
@@ -296,14 +245,14 @@ vector<int> getToporogicalOrder(const vector<int>& init_order,
     if (remaining.find(i) == remaining.end()) continue;
     queue<int> que;
     que.push(i);
-    order.push_back(i); // 0スタート
+    order.push_back(i);
     remaining.erase(i);
     while (!que.empty()) {
       int curr_id = que.front(); que.pop();
       for (const auto& edge : edges[curr_id]) {
         int next = edge.to;
-        if (remaining.find(next) == remaining.end()) continue; // もうないのでいかない
-        order.push_back(next); // つながっているものを追加していく
+        if (remaining.find(next) == remaining.end()) continue; // no remaining
+        order.push_back(next);
         remaining.erase(next);
         que.push(next);
       }
@@ -318,7 +267,7 @@ void validateEdges(const vector<vector<Edge>>& edges, const vector<P>& pose, con
     for (const auto& edge : edges[u]) {
       int v = edge.to;
       if (v < u) continue;
-      ldouble diff = abs(distanceSqurePP(pose[u], pose[v]) / edge.distance - 1); // 元々の距離と今の点から隣接点の距離
+      ldouble diff = abs(distanceSqurePP(pose[u], pose[v]) / edge.distance - 1);
       cerr << u << "-" << v << " : " << diff << " <= " << eps / 1000000. << endl;
       assert(diff < eps);
     }
@@ -343,7 +292,7 @@ vector<P> tyrMatchAllPattern(const int n_figure,
   vector<int> order(n_figure);
   for (int i = 0; i < n_figure; i++) order[i] = i;
 
-  // 対応付けを order で変えながら試す
+  // Try all combinations
   long long tryCount = 0;
   int endCount = 1e9;
 
@@ -354,11 +303,11 @@ vector<P> tyrMatchAllPattern(const int n_figure,
     // cerr << "tryCount : " << tryCount << endl;
     tryCount++;
     if (tryCount % 10000000 == 0) cerr << tryCount << " done." << endl;
-    // order[i]番目のposeの頂点を穴に対応させる
+    // make the vertex of the order [i] th pose correspond to the hole
     bool isValid = true;
-    vector<int> fixed(n_figure); // 頂点の位置決定済み
+    vector<int> fixed(n_figure); // determined
 
-    // 前回と同じ並びの場合試す必要がないのでスキップ
+    // If it is the same as the last time, there is no need to try it, so skip it
     if (prev_miss_index != -1 && order[prev_miss_index] == prev_miss_id) {
       continue;
     }
@@ -366,14 +315,14 @@ vector<P> tyrMatchAllPattern(const int n_figure,
     for (int i = 0; i < match_num; i++) {
       int id = order[i];
       P p = holes_poly[i];
-      // 制約を満たさない場合終了
+      // constraints ng
       if (!isValidAddPointToPose(p, id, pose, fixed, edges, in_holes_map, holes_poly, eps)) {
         isValid = false;
         prev_miss_index = i;
         prev_miss_id = id;
         break;
       }
-      // 決定
+      // Determine
       pose[id] = p;
       fixed[id] = 1;
       // cerr << id << " : " << p << endl;
@@ -382,19 +331,13 @@ vector<P> tyrMatchAllPattern(const int n_figure,
     // cerr << "mid OK" << endl;
 
     // ========================================
-    // poseの数の方が多い場合，残りを適当に配置
-    //  todo: 後ろの方は幅優先順序で固定
-    // vector<int> topo_order;
-    // for (int i = match_num; i < n_figure; i++) {
-    //   topo_order.push_back(order[i]);
-    // }
+    // If there are more poses, place the rest on a valid poiont
     for (int i = match_num; i < n_figure; i++) {
       int id = order[i];
       P valid_p(-1, -1);
       for (int y = 0; y < maxh; y++) {
         for (int x = 0; x < maxw; x++) {
           P curr_p(x, y);
-          // 制約を満たして配置可能
           if (isValidAddPointToPose(curr_p, id, pose, fixed, edges, in_holes_map, holes_poly, eps)) {
             valid_p = curr_p;
             // cerr << id << " : " << valid_p << endl;
@@ -417,10 +360,10 @@ match_end:
 
 
     // ========================================
-    // 実行可能解であれば評価値を計算
+    // Feasible
     if (isValid) {
       double dislikes = calcDislikes(pose, fixed, holes_poly);
-      // 更新
+      // Update score
       if (dislikes < min_dislikes) {
         min_dislikes = dislikes;
         min_pose = pose;
@@ -433,16 +376,17 @@ match_end:
   return min_pose;
 }
 
-void solve2(const int n_figure,
-           const vector<P>& vertices,
-           const int m_figure,
-           const vector<vector<Edge>>& edges,
-           const polygon& holes_poly,
-           const vector<vector<int>>& in_holes_map,
-           const int eps,
-           const int maxh, const int maxw)
+// Try the all combinations of figures and holes
+void solve_try_all_pattern(const int n_figure,
+                           const vector<P>& vertices,
+                           const int m_figure,
+                           const vector<vector<Edge>>& edges,
+                           const polygon& holes_poly,
+                            const vector<vector<int>>& in_holes_map,
+                           const int eps,
+                           const int maxh, const int maxw)
 {
-  if (n_figure <= 20) {
+  if (n_figure <= 13) {
     vector<P> pose = tyrMatchAllPattern(n_figure, vertices, m_figure, edges, holes_poly, in_holes_map, eps, maxh, maxw);
     if (pose.size() == n_figure) {
       OutputJson(pose);
@@ -457,6 +401,7 @@ void solve2(const int n_figure,
   }
 }
 
+//
 void solve(const int n_figure,
            const vector<P>& vertices,
            const int m_figure,
@@ -485,21 +430,20 @@ void solve(const int n_figure,
 
   for (int t = 0; t < max_t; t++) {
     shuffle(order.begin(), order.end(), engine);
-    // 4回に1回は接続順に並び替える（幅優先順序の方が制約の依存関係順になるので良さそう？）
     if (t%5!=4) order = getToporogicalOrder(order, n_figure, vertices, m_figure, edges);
     
     ok_num = 0;
-    vector<int> fixed(n_figure); // 位置が決定済みか
+    vector<int> fixed(n_figure);
     for (int id : order) {
       double min_dislikes = 1e18;
       P min_p;
-      fixed[id] = 1; // 一旦決まったことにする最後に失敗時は戻す
+      fixed[id] = 1;
       for (int y = 0; y < 50; y++) {
         for (int x = 0; x < 50; x++) {
           P curr_p(x, y);
-          pose[id] = curr_p; // 一旦決まったことにする最後に失敗時は戻す
+          pose[id] = curr_p;
 
-          // 制約を満たして配置可能
+          // If valid position,
           if (isValidAddPointToPose(curr_p, id, pose, fixed, edges, in_holes_map, holes_poly, eps)) {
             double dislikes = rand() % 10;//nearesetDistance(curr_p, holes_poly) * (2.0 * ok_num / n_figure) + averageDistance(curr_p, holes_poly);
             //nearesetDistance(curr_p, holes_poly) + calcDislikes(pose, fixed, holes_poly) * 0.001;
@@ -524,7 +468,7 @@ void solve(const int n_figure,
         // cerr << id << ": MISS" << endl;
         break;
       }
-    } // poseの決定
+    } // pose
     if (max_ok_num <= ok_num) {
       max_ok_num = ok_num;
       maxPose = pose;
@@ -540,7 +484,7 @@ void solve(const int n_figure,
 
     auto end_time = chrono::system_clock::now();
     double elapsed = std::chrono::duration_cast<std::chrono::seconds>(end_time-start_time).count();
-    if (elapsed > timeout_sec) break; // タイムアウトで終了
+    if (elapsed > timeout_sec) break; // Timeout
   }
   
   if (max_ok_num == n_figure) {
@@ -621,7 +565,6 @@ int main(void) {
     // cout << endl;
   }
 
-  // 制約を満たす中で一番評価値が高くなる場所に置く
   solve(n_figure, vertices, m_figure, edges, holes_poly, in_holes_map,
         eps, maxh, maxw);
 
