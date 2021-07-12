@@ -207,7 +207,8 @@ double calc_score() {
       }
       intersections.push_back(vertex[v]);
       intersections.push_back(vertex[u]);
-      sort(intersections.begin(), intersections.end());
+      sort(intersections.begin(), intersections.end(), [&](auto &a, auto &b){return   two_point_square_distance(vertex[v], a) - two_point_square_distance(vertex[u], a)
+                                                                                    < two_point_square_distance(vertex[v], b) - two_point_square_distance(vertex[u], b);});
       if (intersections[0] != vertex[v]) reverse(intersections.begin(), intersections.end());
       bool is_outside = abs(angle_sum) < 1e-4;
       for (int i = 0; i < (int) intersections.size() - 1; i++) {
@@ -268,7 +269,8 @@ double calc_vertex_score(int v) {
     }
     intersections.push_back(vertex[v]);
     intersections.push_back(vertex[u]);
-    sort(intersections.begin(), intersections.end());
+    sort(intersections.begin(), intersections.end(), [&](auto &a, auto &b){return   two_point_square_distance(vertex[v], a) - two_point_square_distance(vertex[u], a)
+                                                                                  < two_point_square_distance(vertex[v], b) - two_point_square_distance(vertex[u], b);});
     if (intersections[0] != vertex[v]) reverse(intersections.begin(), intersections.end());
     bool is_outside = abs(angle_sum) < 1e-4;
     for (int i = 0; i < (int) intersections.size() - 1; i++) {
@@ -304,25 +306,14 @@ double calc_vertex_score(int v) {
 
 void solve() {
   // preprocess
+  theRandom.x = (ll) random_device()() << 32 | (ll) random_device()();
+
   original_distance = vector<vector<double> >(n, vector<double>(n, -1.0));
   for (int v = 0; v < n; v++) {
     for (auto &u: edge[v]) {
       original_distance[v][u] = two_point_square_distance(vertex[v], vertex[u]);
     }
   }
-
-  // {
-  //   double gx = 0.0;
-  //   double gy = 0.0;
-  //   for (int i = 0; i < h; i++) {
-  //     gx += hole[i].first;
-  //     gy += hole[i].second;
-  //   }
-  //   for (int v = 0; v < n; v++) {
-  //     vertex[v].first = gx + theRandom.nextDouble() * 1.0 - 0.5;
-  //     vertex[v].second = gy + theRandom.nextDouble() * 1.0 - 0.5;
-  //   }
-  // }
 
   xmin = (int) hole[0].first;
   xmax = (int) hole[0].first;
@@ -335,11 +326,21 @@ void solve() {
     ymax = max(ymax, (int) hole[0].second);
   }
 
+  {
+    double gx = theRandom.nextDouble() * 50.0 - 25.0;
+    double gy = theRandom.nextDouble() * 50.0 - 25.0;
+    for (int v = 0; v < n; v++) {
+      double dx = theRandom.nextDouble() * 10.0 - 5.0;
+      double dy = theRandom.nextDouble() * 10.0 - 5.0;
+      vertex[v].first = gx + dx;
+      vertex[v].second = gy + dy;
+    }
+  }
+
   last_vertex = vertex;
 
-  eps *= 0.1;
-
-  theRandom.x = (ll) random_device()() << 32 | (ll) random_device()();
+  double eps_orig = eps;
+  eps *= theRandom.nextDouble() * 0.5;
 
   // optimization
   {
@@ -353,14 +354,16 @@ void solve() {
     double time_limit = 9.950;
     int iter_count = 0;
 
+    double delta_max = theRandom.nextDouble() * 5.0;
+
     theTimer.restart();
 
     while (theTimer.time() < time_limit) {
       double roll = theRandom.nextDouble();
       if (roll < 0.20) {
         int v = theRandom.nextUIntMod(n);
-        double dx = theRandom.nextDouble() * 4.0 - 2.0;
-        double dy = theRandom.nextDouble() * 4.0 - 2.0;
+        double dx = theRandom.nextDouble() * delta_max - delta_max / 2;
+        double dy = theRandom.nextDouble() * delta_max - delta_max / 2;
 
         score -= calc_vertex_score(v);
         vertex[v].first += dx;
@@ -389,8 +392,8 @@ void solve() {
       }
       else if (roll < 1.00) {
         for (int v = 0; v < n; v++) {
-          double dx = theRandom.nextDouble() * 4.0 - 2.0;
-          double dy = theRandom.nextDouble() * 4.0 - 2.0;
+          double dx = theRandom.nextDouble() * delta_max - delta_max / 2;
+          double dy = theRandom.nextDouble() * delta_max - delta_max / 2;
 
           vertex[v].first += dx;
           vertex[v].second += dy;
@@ -438,6 +441,7 @@ void solve() {
   edge_out_of_bound_penalty_factor = 1e9;
   edge_distance_penalty_factor = 1e6;
 
+  eps = eps + (eps_orig - eps) * theRandom.nextDouble();
   ans = vertex;
 
   {
@@ -447,7 +451,7 @@ void solve() {
 
     double base_temperature = 1.0e3;
     double temperature = base_temperature;
-    double decay_rate = 4.0e-6;
+    double decay_rate = 1.0e-5;
     double time_limit = 9.950;
     int iter_count = 0;
 
