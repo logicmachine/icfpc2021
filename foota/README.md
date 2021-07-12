@@ -4,6 +4,8 @@
 
 ## Build
 
+* Requirements: C++20
+
 ```
 $ make
 ```
@@ -11,7 +13,7 @@ $ make
 ## Usage
 
 ```
-burain_wall_solver [time=300.0] < input_file
+brain_wall_solver [time=300.0] < input_file
 ```
 
 Output is vertices of the `pose`.
@@ -19,7 +21,7 @@ Output is vertices of the `pose`.
 * example
 
 ```
-$ ./burain_wall_solver 180 < problem_001.in
+$ ./brain_wall_solver 180 < problems/1.in
 ```
 
 `input_file` is generated from a problem json file by `problems/convet_bonus_format.py`.
