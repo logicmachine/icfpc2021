@@ -1,0 +1,1 @@
+main.html is a tool for solving problems manually. You can move each vertex by dragging it with the mouse. Pressing the arrow keys will move the vertex closest to the cursor, pressing S will lock the vertex closest to the cursor to the nearest integer coordinate point, and pressing A will release it.
