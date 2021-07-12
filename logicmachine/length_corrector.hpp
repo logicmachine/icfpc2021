@@ -8,8 +8,8 @@ static std::vector<lc::Point> correct_edge_lengths(
 	const std::vector<lc::Point>& coords,
 	double eps)
 {
-	static const int    MAX_ITERATIONS = 1000;
-	static const double ALPHA          = 0.001;
+	static const int    MAX_ITERATIONS = 2000;
+	static const double ALPHA          = 0.0005;
 
 	const int n = coords.size();
 	std::vector<lc::Point> current = coords;

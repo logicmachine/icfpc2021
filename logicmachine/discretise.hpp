@@ -43,9 +43,9 @@ static std::vector<lc::Point> discretise(
 	const std::vector<lc::Point>& values,
 	double eps)
 {
-	static const int    NUM_ITERATIONS  = 200000;
-	static const double MAX_TEMPERATURE = 0.00001;
-	static const double MIN_TEMPERATURE = 0.000001;
+	static const int    NUM_ITERATIONS  = 100000;
+	static const double MAX_TEMPERATURE = 0.0001;
+	static const double MIN_TEMPERATURE = 0.000003;
 
 	static const double NEIGHBOR_DX[] = { 1, 1, 0, -1, -1, -1, 0, 1 };
 	static const double NEIGHBOR_DY[] = { 0, -1, -1, -1, 0, 1, 1, 1 };
@@ -63,7 +63,9 @@ static std::vector<lc::Point> discretise(
 	std::vector<lc::Point> best = current;
 	double current_score = discretise_evaluate(hole, edges, discretised, current, eps);
 	double best_score    = current_score;
+#ifndef NO_PROGRESS
 	std::cerr << "Discretise: " << best_score << std::endl;
+#endif
 
 	for(int iteration = 0; iteration < NUM_ITERATIONS; ++iteration){
 		const double progress = static_cast<double>(iteration) / NUM_ITERATIONS;
@@ -87,14 +89,16 @@ static std::vector<lc::Point> discretise(
 			if(current_score < best_score){
 				best_score = current_score;
 				best       = current;
+#ifndef NO_PROGRESS
 				std::cerr << "Discretise: " << best_score << std::endl;
+#endif
 				if(best_score == 0.0){ break; }
 			}
 		}
 	}
 
 	for(int i = 0; i < n; ++i){
-		discretised[i] += current[i];
+		discretised[i] += best[i];
 	}
 	return discretised;
 }

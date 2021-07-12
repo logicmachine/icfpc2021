@@ -1,12 +1,16 @@
 #ifndef BRAIN_WALL_XORSHIFT128_HPP
 #define BRAIN_WALL_XORSHIFT128_HPP
 
+#include <chrono>
 #include <climits>
 #include <cstdint>
+#include <unistd.h>
 
 inline uint32_t xorshift128(){
-	static uint32_t x = 192479812u;
-	static uint32_t y = 784892731u;
+	// static uint32_t x = 192479812u;
+	// static uint32_t y = 784892731u;
+	static uint32_t x = std::chrono::system_clock::now().time_since_epoch().count();
+	static uint32_t y = getpid();
 	static uint32_t z = 427398108u;
 	static uint32_t w = 48382934u; 
 	const uint32_t t = x ^ (x << 11);

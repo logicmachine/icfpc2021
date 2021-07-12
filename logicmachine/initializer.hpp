@@ -2,6 +2,7 @@
 #define BRAIN_WALL_INITIALIZER_HPP
 
 #include <random>
+#include "xorshift128.hpp"
 #include "brain_wall.hpp"
 
 static std::vector<lc::Point> initialize_passthrough(const Problem& problem){
@@ -29,7 +30,9 @@ static std::vector<lc::Point> initialize_random(const Problem& problem){
 	std::vector<lc::Point> vertices(k);
 	for(int i = 0; i < k; ++i){
 		do {
-			vertices[i] = lc::Point(x_dist(engine), y_dist(engine));
+			const double x = min_x + (max_x - min_x) * floating_random();
+			const double y = min_y + (max_y - min_y) * floating_random();
+			vertices[i] = lc::Point(x, y);
 		} while(hole.contains(vertices[i]) < 0);
 	}
 

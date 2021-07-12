@@ -16,6 +16,7 @@ inline lc::Line bisector(const lc::Line& a, const lc::Line& b){
 inline double distance(const lc::Polygon& poly, const lc::Segment& s){
 	const size_t n = poly.size();
 	std::vector<lc::Point> candidates = { s.a, s.b };
+#if 1
 	for(size_t i = 0; i < n; ++i){
 		const auto& a = poly[i];
 		const auto& b = poly[(i + 1) % n];
@@ -24,6 +25,22 @@ inline double distance(const lc::Polygon& poly, const lc::Segment& s){
 		const auto cp = lc::crossing_points(bs, s);
 		if(!cp.empty()){ candidates.push_back(cp[0]); }
 	}
+#else
+	for(size_t i = 0; i < n; ++i){
+		for(size_t j = i + 1; j < n; ++j){
+			const lc::Line l0(poly[i], poly[(i + 1) % n]);
+			const lc::Line l1(poly[j], poly[(j + 1) % n]);
+			if(lc::intersect(l0, l1)){
+				const auto bs = bisector(l0, l1);
+				const auto cp0 = lc::crossing_points(bs, s);
+				if(!cp0.empty()){ candidates.push_back(cp0[0]); }
+				const auto cp1 = lc::crossing_points(
+					lc::Line(bs[0], bs[0] + (bs[1] - bs[0]).ortho()), s);
+				if(!cp1.empty()){ candidates.push_back(cp1[0]); }
+			}
+		}
+	}
+#endif
 	double result = 0.0;
 	for(const auto& p : candidates){
 		if(poly.contains(p) >= 0){ continue; }

@@ -28,11 +28,6 @@ static double optimize_evaluate(
 		}
 		score += best * RCP_HOLE_PENALTY;
 	}
-	for(const auto& v : vertices){
-		const double dx = std::abs(v.x - std::round(v.x));
-		const double dy = std::abs(v.y - std::round(v.y));
-		score += 1e-2 * (dx + dy);
-	}
 	return score;
 }
 
@@ -42,22 +37,25 @@ static std::vector<lc::Point> optimize(
 	const std::vector<lc::Point>& initial,
 	double eps)
 {
-	static const int    NUM_ITERATIONS  = 100000;
+	static const int    NUM_ITERATIONS  = 20000; //100000;
 	static const double MAX_TEMPERATURE = 0.1;
-	static const double MIN_TEMPERATURE = 0.002;
+	static const double MIN_TEMPERATURE = 0.001;
 	static const double ALPHA           = 1e3 * std::sqrt(eps);
+	static const double EPSILON_SCALE   = 0.05;
 
 	const int n = initial.size();
-	std::vector<lc::Point> current = correct_edge_lengths(edges, initial, eps * 0.25);
+	std::vector<lc::Point> current = correct_edge_lengths(edges, initial, eps * EPSILON_SCALE);
 	std::vector<lc::Point> best    = current;
 	double current_score = optimize_evaluate(hole, edges, current, eps);
 	double best_score    = current_score;
+#ifndef NO_PROGRESS
 	std::cerr << "Optimize: " << best_score << std::endl;
+#endif
 
 	for(int iteration = 0; iteration < NUM_ITERATIONS; ++iteration){
 		const double progress = static_cast<double>(iteration) / NUM_ITERATIONS;
 		const double temperature = MAX_TEMPERATURE - (MAX_TEMPERATURE - MIN_TEMPERATURE) * progress;
-		const double alpha = std::max(ALPHA * (1.0 - progress), 0.5);
+		const double alpha = std::max(ALPHA * (1.0 - progress), 0.1);
 
 		const auto target = modulus_random(n);
 		const auto dx = (floating_random() * 2.0 - 1.0) * alpha;
@@ -67,7 +65,7 @@ static std::vector<lc::Point> optimize(
 		new_coords[target].y += dy;
 		new_coords = correct_edge_lengths(edges, new_coords, eps);
 
-		const double new_score = optimize_evaluate(hole, edges, new_coords, eps * 0.25);
+		const double new_score = optimize_evaluate(hole, edges, new_coords, eps * EPSILON_SCALE);
 		const double e = std::exp((current_score - new_score) / temperature);
 		if(floating_random() <= e){
 			current_score = new_score;
@@ -75,7 +73,9 @@ static std::vector<lc::Point> optimize(
 			if(current_score < best_score){
 				best_score = current_score;
 				best       = current;
-				std::cerr << "Optimize: " << best_score << std::endl;
+#ifndef NO_PROGRESS
+				std::cerr << "Optimize: " << best_score << " (" << iteration << " / " << NUM_ITERATIONS << ")" << std::endl;
+#endif
 			}
 		}
 	}
