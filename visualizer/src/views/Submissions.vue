@@ -37,7 +37,8 @@ export default {
       ],
       submissions: [],
       options: {
-        itemsPerPage: -1
+        itemsPerPage: -1,
+        sortBy: ['dislikes']
       }
     }
   },

@@ -25,10 +25,22 @@
                 :x2="transformX(edge.x1)" :y2="transformY(edge.y1)"
                 stroke="#f44336" stroke-width="2">
           </line>
+          <circle v-for="(bonus, index) in bonuses" :key="'bonus' + index"
+                  :cx="transformX(bonus.position.x)" :cy="transformY(bonus.position.y)" r="10"
+                  fill="none" :stroke="bonus.color" stroke-width="4">
+          </circle>
           <circle v-for="(vertex, index) in solutionVertices" :key="'solutionVertex' + index"
                   :cx="transformX(vertex.x)" :cy="transformY(vertex.y)" r="4"
-                  fill="#f44336" stroke="none">
+                  fill="#f44336" stroke="none"
+                  @click="dumpVertex(vertex)">
           </circle>
+          <!--
+          <circle v-for="(vertex, index) in hole" :key="'hole' + index"
+                  :cx="transformX(vertex.x)" :cy="transformY(vertex.y)" r="4"
+                  fill="#000000" stroke="none"
+                  @click="dumpVertex(index)">
+          </circle>
+          -->
         </svg>
       </v-col>
     </v-row>
@@ -42,6 +54,13 @@ const api_options = {
   headers: {
     'Authorization': `Bearer ${process.env.VUE_APP_API_TOKEN}`
   }
+}
+
+const BONUS_COLOR_TABLE = {
+  GLOBALIST: '#ffeb3b',
+  BREAK_A_LEG: '#2196f3',
+  WALLHACK: '#ff9800',
+  SUPERFLEX: '#00bcd4'
 }
 
 export default {
@@ -154,9 +173,7 @@ export default {
           this.solution = { vertices: [] }
           this.problem  = obj
         }else if(hasProperty('vertices')){
-          if(this.problem.figure.vertices.length == obj.vertices.length){
-            this.solution = obj
-          }
+          this.solution = obj
         }
       }
       reader.readAsText(e.dataTransfer.files[0])
@@ -223,6 +240,11 @@ export default {
       this.scrollY = (maxy + miny) * 0.5 * z - this.canvasHeight * 0.5
       this.zoom    = z
     },
+
+    // Debug helper
+    dumpVertex(v){
+      console.log(v)
+    },
   },
 
   computed: {
@@ -255,16 +277,41 @@ export default {
     solutionEdges(){
       const vertices = this.solution.vertices
       if(!vertices || vertices.length == 0){ return [] }
-      return this.problem.figure.edges.map(e => {
+      var breakEdge = null
+      if(this.solution.bonuses){
+        this.solution.bonuses.forEach(b => {
+          if(b.bonus == 'BREAK_A_LEG'){ breakEdge = b.edge }
+        })
+      }
+      const edges = []
+      this.problem.figure.edges.forEach(e => {
         const u = vertices[e[0]], v = vertices[e[1]]
-        return { x0: u[0], y0: u[1], x1: v[0], y1: v[1] }
+        if(breakEdge && e[0] == breakEdge[0] && e[1] == breakEdge[1]){ return }
+        edges.push({ x0: u[0], y0: u[1], x1: v[0], y1: v[1] })
       })
+      if(breakEdge){
+        const a = vertices[breakEdge[0]]
+        const b = vertices[vertices.length - 1]
+        const c = vertices[breakEdge[1]]
+        edges.push({ x0: a[0], y0: a[1], x1: b[0], y1: b[1] })
+        edges.push({ x0: b[0], y0: b[1], x1: c[0], y1: c[1] })
+      }
+      return edges
     },
     solutionVertices(){
       return this.solution.vertices.map(v => {
         return { x: v[0], y: v[1] }
       })
     },
+    bonuses(){
+      if(!this.problem.bonuses){ return [] }
+      return this.problem.bonuses.map(b => {
+        return {
+          position: { x: b.position[0], y: b.position[1] },
+          color: BONUS_COLOR_TABLE[b.bonus]
+        }
+      })
+    }
   }
 }
 </script>
