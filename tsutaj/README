@@ -1,0 +1,18 @@
+## tsutaj's solution
+
+Since we have to keep edge-length rules, I researched how to deal with. During the research, I found "Verlet's Algorithm" [1], so I wrote a solution using this algorithm.
+
+My solution is based on Simulated Annealing. Procedures are shown below:
+
+- Find a initial solution
+  - Using parallel transport only. A solution which gain the highest score is set as initial solution.
+- Find a neighbor solution
+  - We find next solution by moving some pose vertices.
+- Output the answer
+  - Finally we do parallel transport again, and set a solution which gain highest score is set as final solution.
+
+However, this does not seem to work well. Eventually I found a solution by hand using JiroTech's tool.
+
+### reference
+
+[1]: https://datagenetics.com/blog/july22018/index.html
