@@ -247,8 +247,9 @@
           document.addEventListener("paste", function(e) {
               let paste = (event.clipboardData || window.clipboardData).getData('text');                                    
               info = JSON.parse(paste);
-              for(let i=0; i<info["vertices"].length; i++) {
-                  let [x, y] = info["vertices"][i];
+              vertices = info["vertices"] ?? info["solution"]["vertices"];
+              for(let i=0; i<vertices.length; i++) {
+                  let [x, y] = vertices[i];
                   x = x * x_scale + x_origin;
                   y = y * y_scale + y_origin;
                   Matter.Body.setPosition(V[i], {x:x, y:y});
