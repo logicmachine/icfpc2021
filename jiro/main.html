@@ -1,288 +1,301 @@
 <!DOCTYPE html>
 <html lang="ja">
-    <head>
-        <style>
-          canvas {
-            position: absolute;
-          }
-        </style>
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/react/0.14.3/react.js"></script>
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/react/0.14.3/react-dom.js"></script>
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-core/5.8.23/browser.min.js"></script>
-        <title>Sample</title>
-    </head>
-    <body>
-        <div id="container"></div>
-        <form id="json_form">
-          <input type="file" id="json_file"/>
-        </form>
-        <canvas id="canvas" style="z-index:3"></canvas>
-        <canvas id="overlay" width="1200" height="1200" style="z-index:1; pointer-events: none; opacity: 1;"></canvas>
-        <canvas id="scorelay" width="1200" height="1200" style="z-index:2; pointer-events: none; opacity: 1;"></canvas>
-        <script src="./js/matter.min.js"></script>
-        <script>
-          let dist = function(xy1, xy2){
-            return (xy1.x - xy2.x) * (xy1.x - xy2.x) + (xy1.y - xy2.y) * (xy1.y - xy2.y)
-          }
-          const width = 1200
-          const height = 1200
-          let eps
-          let constraint_dists = []
-          var shift_key = false
-          var command_key = false
-          func = function(input) {
-              let x_scale, y_scale
-              {
-                let l = 1000000000
-                let r = 0
-                let u = 1000000000
-                let d = 0
-                for(let i = 0; i < input.hole.length; i++){
+  <head>
+    <style>
+      canvas {
+          position: absolute;
+      }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react/0.14.3/react.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react/0.14.3/react-dom.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-core/5.8.23/browser.min.js"></script>
+    <title>Sample</title>
+  </head>
+  <body>
+    <div id="container"></div>
+    <form id="json_form">
+      <input type="file" id="json_file"/>
+    </form>
+    <canvas id="canvas" style="z-index:3"></canvas>
+    <canvas id="overlay" width="1200" height="1200" style="z-index:1; pointer-events: none; opacity: 1;"></canvas>
+    <canvas id="scorelay" width="1200" height="1200" style="z-index:2; pointer-events: none; opacity: 1;"></canvas>
+    <script src="./js/matter.min.js"></script>
+    <script>
+      let dist = function(xy1, xy2){
+          return (xy1.x - xy2.x) * (xy1.x - xy2.x) + (xy1.y - xy2.y) * (xy1.y - xy2.y)
+      }
+      const width = 1200
+      const height = 1200
+      let eps
+      let constraint_dists = []
+      var shift_key = false
+      var command_key = false
+      func = function(input) {
+          let x_scale, y_scale
+          {
+              let l = 1000000000
+              let r = 0
+              let u = 1000000000
+              let d = 0
+              for(let i = 0; i < input.hole.length; i++){
                   let x = input.hole[i][0]
                   if(x < l){
-                    l = x
+                      l = x
                   }
                   if(r < x){
-                    r = x
+                      r = x
                   }
                   let y = input.hole[i][1]
                   if(y < u){
-                    u = y
+                      u = y
                   }
                   if(d < y){
-                    d = y
+                      d = y
                   }
-                }
-                x_scale = Math.min((width/(r+2))|0, (height/(d+2))|0)
-                y_scale = x_scale
               }
-              const x_origin = x_scale
-              const y_origin = y_scale
-              if(x_origin%x_scale != 0){
-                alert('x_origin%x_scale=0にしてください')
+              x_scale = Math.min((width/(r+2))|0, (height/(d+2))|0)
+              y_scale = x_scale
+          }
+          const x_origin = x_scale
+          const y_origin = y_scale
+          if(x_origin%x_scale != 0){
+              alert('x_origin%x_scale=0にしてください')
+          }
+          if(y_origin%y_scale != 0){
+              alert('y_origin%y_scale=0にしてください')
+          }
+          var Engine = Matter.Engine,
+              Render = Matter.Render,
+              Runner = Matter.Runner,
+              Composites = Matter.Composites,
+              Common = Matter.Common,
+              Constraint = Matter.Constraint,
+              MouseConstraint = Matter.MouseConstraint,
+              Mouse = Matter.Mouse,
+              Composite = Matter.Composite,
+              Bodies = Matter.Bodies;
+
+          // create engine
+          var engine = Engine.create(),
+              world = engine.world;
+          engine.world.gravity.y = 0;
+
+          var canvas = document.getElementById('canvas')
+          var overlay = document.getElementById('overlay')
+          var scorelay = document.getElementById('scorelay')
+
+          // create renderer
+          render = Render.create({
+              element: document.body,
+              engine: engine,
+              canvas: canvas,
+              options: {
+                  width: width,
+                  height: height,
+                  wireframes: false,
+                  showAngleIndicator: true,
+                  background: '#aaaaaa'
               }
-              if(y_origin%y_scale != 0){
-                alert('y_origin%y_scale=0にしてください')
-              }
-              var Engine = Matter.Engine,
-                  Render = Matter.Render,
-                  Runner = Matter.Runner,
-                  Composites = Matter.Composites,
-                  Common = Matter.Common,
-                  Constraint = Matter.Constraint,
-                  MouseConstraint = Matter.MouseConstraint,
-                  Mouse = Matter.Mouse,
-                  Composite = Matter.Composite,
-                  Bodies = Matter.Bodies;
+          });
 
-              // create engine
-              var engine = Engine.create(),
-                  world = engine.world;
-              engine.world.gravity.y = 0;
+          Render.run(render);
+          canvas.style.backgroundColor = 'transparent'
+          scorelay.style.backgroundColor = 'transparent'
 
-              var canvas = document.getElementById('canvas')
-              var overlay = document.getElementById('overlay')
-              var scorelay = document.getElementById('scorelay')
+          // create runner
+          var runner = Runner.create();
+          Runner.run(runner, engine);
 
-              // create renderer
-              render = Render.create({
-                  element: document.body,
-                  engine: engine,
-                  canvas: canvas,
-                  options: {
-                      width: width,
-                      height: height,
-                      wireframes: false,
-                      showAngleIndicator: true,
-                      background: '#aaaaaa'
-                  }
-              });
-
-              Render.run(render);
-              canvas.style.backgroundColor = 'transparent'
-              scorelay.style.backgroundColor = 'transparent'
-
-              // create runner
-              var runner = Runner.create();
-              Runner.run(runner, engine);
-
-              holes = input.hole.slice()
-              holes.push(holes[0])
-              H = []
-              for(let i = 0; i < holes.length-1; i++){
-                x1 = holes[i][0] * x_scale + x_origin
-                y1 = holes[i][1] * y_scale  + y_origin
-                x2 = holes[i+1][0] * x_scale  + x_origin
-                y2 = holes[i+1][1] * y_scale  + y_origin
-                xc = (x1 + x2) / 2
-                yc = (y1 + y2) / 2
-                len = Math.sqrt((x2-x1) * (x2-x1) + (y2-y1) * (y2-y1))
-                angle = Math.PI / 2
-                if(x2 != x1){
+          holes = input.hole.slice()
+          holes.push(holes[0])
+          H = []
+          for(let i = 0; i < holes.length-1; i++){
+              x1 = holes[i][0] * x_scale + x_origin
+              y1 = holes[i][1] * y_scale  + y_origin
+              x2 = holes[i+1][0] * x_scale  + x_origin
+              y2 = holes[i+1][1] * y_scale  + y_origin
+              xc = (x1 + x2) / 2
+              yc = (y1 + y2) / 2
+              len = Math.sqrt((x2-x1) * (x2-x1) + (y2-y1) * (y2-y1))
+              angle = Math.PI / 2
+              if(x2 != x1){
                   angle = Math.atan((y2 - y1) / (x2 - x1))
                   if(x2 < x1){
-                    angle += Math.PI
+                      angle += Math.PI
                   }
-                }
-                hole_line_width = 2
-                let body = Bodies.rectangle(xc,yc,len,hole_line_width, {isStatic: true, angle: angle, density:1, collisionFilter:{category:1, mask:8}})
-                dy = -(x2 - x1) / len
-                dx = (y2 - y1) / len
-                // Matter.Body.translate(body, {x:0, y:100})
-                Matter.Body.translate(body, {x:hole_line_width/2 * dx, y:hole_line_width/2 * dy})
-                H.push(body)
-                body['pointer-event'] = 'none'
               }
-              Composite.add(world,H);
+              hole_line_width = 2
+              let body = Bodies.rectangle(xc,yc,len,hole_line_width, {isStatic: true, angle: angle, density:1, collisionFilter:{category:1, mask:8}})
+              dy = -(x2 - x1) / len
+              dx = (y2 - y1) / len
+              // Matter.Body.translate(body, {x:0, y:100})
+              Matter.Body.translate(body, {x:hole_line_width/2 * dx, y:hole_line_width/2 * dy})
+              H.push(body)
+              body['pointer-event'] = 'none'
+          }
+          Composite.add(world,H);
 
-              vertices = input.figure.vertices.slice()
-              edges = input.figure.edges.slice()
-              V = []
-              E = []
-              for(let i = 0; i < vertices.length; i++){
-                const x = vertices[i][0] * x_scale + x_origin
-                const y = vertices[i][1] * y_scale + y_origin
-                const r = 10
-                const v = Bodies.circle(x, y, r, {frictionAir: 1, inertia: Infinity, render:{fillStyle:'black', strokeStyle:'black'},
-                                        collisionFilter:{category:2, mask:1}})
-                V.push(v)
-              }
-              for(let i = 0; i < edges.length; i++){
-                const idx1 = edges[i][0]
-                const idx2 = edges[i][1]
-                const v1 = V[idx1]
-                const v2 = V[idx2]
-                constraint = Constraint.create({
+          vertices = input.figure.vertices.slice()
+          edges = input.figure.edges.slice()
+          V = []
+          E = []
+          for(let i = 0; i < vertices.length; i++){
+              const x = vertices[i][0] * x_scale + x_origin
+              const y = vertices[i][1] * y_scale + y_origin
+              const r = 10
+              const v = Bodies.circle(x, y, r, {frictionAir: 1, inertia: Infinity, render:{fillStyle:'black', strokeStyle:'black'},
+                                                collisionFilter:{category:2, mask:1}})
+              V.push(v)
+          }
+          for(let i = 0; i < edges.length; i++){
+              const idx1 = edges[i][0]
+              const idx2 = edges[i][1]
+              const v1 = V[idx1]
+              const v2 = V[idx2]
+              constraint = Constraint.create({
                   bodyA: v1,
                   pointA: {x:0, y:0},
                   bodyB: v2,
                   pointB: {x:0, y:0},
                   render:{
-                    lineWidth: 1,
-                    type: "line"
+                      lineWidth: 1,
+                      type: "line"
                   },
                   stiffness: 0.1,
-                });
-                E.push(constraint)
-                constraint_dists.push(dist(v1.position, v2.position))
-              }
-
-              Composite.add(world, V);
-              Composite.add(world, E);
-
-              eps = input.epsilon
-
-              // Composite.add(world, [
-              //     // walls
-              //     Bodies.rectangle(400, 0, 800, 50, { isStatic: true }),
-              //     Bodies.rectangle(400, 600, 800, 50, { isStatic: true }),
-              //     Bodies.rectangle(800, 300, 50, 600, { isStatic: true }),
-              //     Bodies.rectangle(0, 300, 50, 600, { isStatic: true })
-              // ]);
-
-              // add mouse control
-              mouse = Mouse.create(render.canvas),
-                  mouseConstraint = MouseConstraint.create(engine, {
-                      mouse: mouse,
-                      constraint: {
-                          // allow bodies on mouse to rotate
-                          angularStiffness: 0,
-                          render: {
-                              visible: false
-                          }
-                      }
-                  });
-
-              Composite.add(world, mouseConstraint);
-
-              // keep the mouse in sync with rendering
-              render.mouse = mouse;
-
-              // fit the render viewport to the scene
-              Render.lookAt(render, {
-                  min: { x: 0, y: 0 },
-                  max: { x: width, y: height }
               });
+              E.push(constraint)
+              constraint_dists.push(dist(v1.position, v2.position))
+          }
 
-              //grid線を書く
-              let context = overlay.getContext('2d')
-              context.lineWidth = 0.1;
-              // context.
-              for(let i = y_origin; i < height; i+=y_scale){
-                context.beginPath();
-                context.moveTo(0,i);
-                context.lineTo(width,i);
-                context.closePath();
-                context.stroke();
-              }
-              for(let j = x_origin; j < width; j+=x_scale){
-                context.beginPath();
-                context.moveTo(j,0);
-                context.lineTo(j,height);
-                context.closePath();
-                context.stroke();
-              }
+          Composite.add(world, V);
+          Composite.add(world, E);
 
-              document.addEventListener("copy", function(e){
-                  let ans = '{'
-                  ans += '"vertices": ['
-                  for(let i = 0; i < V.length; i++){
-                    let x = V[i].position.x
-                    let y = V[i].position.y
-                    x -= x_origin
-                    y -= y_origin
-                    x /= x_scale
-                    y /= y_scale
-                    ans += "[" + x + "," + y + "]"
-                    if(i != V.length - 1){
-                      ans += ","
-                    }
+          eps = input.epsilon
+
+          // Composite.add(world, [
+          //     // walls
+          //     Bodies.rectangle(400, 0, 800, 50, { isStatic: true }),
+          //     Bodies.rectangle(400, 600, 800, 50, { isStatic: true }),
+          //     Bodies.rectangle(800, 300, 50, 600, { isStatic: true }),
+          //     Bodies.rectangle(0, 300, 50, 600, { isStatic: true })
+          // ]);
+
+          // add mouse control
+          mouse = Mouse.create(render.canvas),
+          mouseConstraint = MouseConstraint.create(engine, {
+              mouse: mouse,
+              constraint: {
+                  // allow bodies on mouse to rotate
+                  angularStiffness: 0,
+                  render: {
+                      visible: false
                   }
-                  ans += "]}"
-                  e.clipboardData.setData("text/plain" , ans);    
-                  // 本来のイベントをキャンセル
-                  e.preventDefault();
-                  alert("各点の座標をjson形式でコピーしました")
-              });
-              document.onkeydown = function(e) {
-                  let move_ok
-                  var key_event = e || window.event
-                  //全体
-                  let shift_key = key_event.shiftKey
-                  //5倍
-                  let ctrl_key = key_event.ctrlKey || key_event.metaKey
-                  console.log(ctrl_key)
-                  if(e.keyCode == 73){//i
-                    let cx = mouse.position.x
-                    let cy = mouse.position.y
-                    if(cx%x_scale >= x_scale/2){
+              }
+          });
+
+          Composite.add(world, mouseConstraint);
+
+          // keep the mouse in sync with rendering
+          render.mouse = mouse;
+
+          // fit the render viewport to the scene
+          Render.lookAt(render, {
+              min: { x: 0, y: 0 },
+              max: { x: width, y: height }
+          });
+
+          //grid線を書く
+          let context = overlay.getContext('2d')
+          context.lineWidth = 0.1;
+          // context.
+          for(let i = y_origin; i < height; i+=y_scale){
+              context.beginPath();
+              context.moveTo(0,i);
+              context.lineTo(width,i);
+              context.closePath();
+              context.stroke();
+          }
+          for(let j = x_origin; j < width; j+=x_scale){
+              context.beginPath();
+              context.moveTo(j,0);
+              context.lineTo(j,height);
+              context.closePath();
+              context.stroke();
+          }
+
+          document.addEventListener("copy", function(e){
+              let ans = '{'
+              ans += '"vertices": ['
+              for(let i = 0; i < V.length; i++){
+                  let x = V[i].position.x
+                  let y = V[i].position.y
+                  x -= x_origin
+                  y -= y_origin
+                  x /= x_scale
+                  y /= y_scale
+                  ans += "[" + x + "," + y + "]"
+                  if(i != V.length - 1){
+                      ans += ","
+                  }
+              }
+              ans += "]}"
+              e.clipboardData.setData("text/plain" , ans);    
+              // 本来のイベントをキャンセル
+              e.preventDefault();
+              alert("各点の座標をjson形式でコピーしました")
+          });
+          document.addEventListener("paste", function(e) {
+              let paste = (event.clipboardData || window.clipboardData).getData('text');                                    
+              info = JSON.parse(paste);
+              for(let i=0; i<info["vertices"].length; i++) {
+                  let [x, y] = info["vertices"][i];
+                  x = x * x_scale + x_origin;
+                  y = y * y_scale + y_origin;
+                  Matter.Body.setPosition(V[i], {x:x, y:y});
+              }
+          });
+          document.onkeydown = function(e) {
+              let move_ok
+              var key_event = e || window.event
+              //全体
+              let shift_key = key_event.shiftKey
+              //5倍
+              let ctrl_key = key_event.ctrlKey || key_event.metaKey
+              console.log(ctrl_key)
+              if(e.keyCode == 73){//i
+                  let cx = mouse.position.x
+                  let cy = mouse.position.y
+                  if(cx%x_scale >= x_scale/2){
                       cx = (cx - cx%x_scale + x_scale) | 0
-                    }else{
+                  }else{
                       cx = (cx - cx%x_scale) | 0
-                    }
-                    if(cy%y_scale >= y_scale/2){
+                  }
+                  if(cy%y_scale >= y_scale/2){
                       cy = (cy - cy%y_scale + y_scale) | 0
-                    }else{
+                  }else{
                       cy = (cy - cy%y_scale) | 0
-                    }
-                    for(let i = 0; i < V.length; i++){
-                      V[i].position.y = 2 * cy - V[i].position.y
-                    }
-                    return
-                  }else if(e.keyCode == 82){//r
-                    let cx = mouse.position.x
-                    let cy = mouse.position.y
-                    if(cx%x_scale >= x_scale/2){
+                  }
+                  for(let i = 0; i < V.length; i++){                          
+                      Matter.Body.setPosition(V[i], {
+                          x: V[i].position.x,
+                          y: 2 * cy - V[i].position.y
+                      });
+                  }
+                  return
+              }else if(e.keyCode == 82){//r
+                  let cx = mouse.position.x
+                  let cy = mouse.position.y
+                  if(cx%x_scale >= x_scale/2){
                       cx = (cx - cx%x_scale + x_scale) | 0
-                    }else{
+                  }else{
                       cx = (cx - cx%x_scale) | 0
-                    }
-                    if(cy%y_scale >= y_scale/2){
+                  }
+                  if(cy%y_scale >= y_scale/2){
                       cy = (cy - cy%y_scale + y_scale) | 0
-                    }else{
+                  }else{
                       cy = (cy - cy%y_scale) | 0
-                    }
-                    for(let i = 0; i < V.length; i++){
+                  }
+                  for(let i = 0; i < V.length; i++){
                       let x = V[i].position.x
                       let y = V[i].position.y
                       x -= cx
@@ -291,132 +304,142 @@
                       let y2 = -x
                       x2 += cx
                       y2 += cy
-                      V[i].position.x = x2
-                      V[i].position.y = y2
-                    }
-                    return
+                      Matter.Body.setPosition(V[i], {
+                          x: x2,
+                          y: y2
+                      });
+                  }
+                      return
                   }else if(e.keyCode == 65){//a
-                    move_ok = true
-                    console.log("active")
+                      move_ok = true
+                      console.log("active")
                   }else if(e.keyCode == 83){//s
-                    move_ok = false;
-                    console.log("stop")
+                      move_ok = false;
+                      console.log("stop")
                   }else if(e.keyCode == 71){//g
-                    if(overlay.style.opacity == 1){
-                      overlay.style.opacity = 0
-                    }else{
-                      overlay.style.opacity = 1
-                    }
-                    return
-                  }else if(37 <= e.keyCode && e.keyCode <= 40){
-                    console.log(e.keyCode)
-                    e.preventDefault();//規定の動作をキャンセル
-                    let dx = 0
-                    let dy = 0
-                    if(e.keyCode == 37){
-                      dx = -x_scale
-                    }else if(e.keyCode == 38){
-                      dy = -y_scale
-                    }else if(e.keyCode == 39){
-                      dx = x_scale
-                    }else{
-                      dy = y_scale
-                    }
-                    if(ctrl_key){
-                      dx *= 5
-                      dy *= 5
-                    }
-                    if(shift_key){
-                      for(let i = 0; i < V.length; i++){
-                        V[i].position.x += dx;
-                        V[i].position.y += dy;
+                      if(overlay.style.opacity == 1){
+                          overlay.style.opacity = 0
+                      }else{
+                          overlay.style.opacity = 1
                       }
                       return
-                    }
-                    let x1 = mouse.position.x
-                    let y1 = mouse.position.y
-                    let best_vi = 0
-                    let min_dist = 1000000000
-                    for(let i = 0; i < V.length; i++){
-                      let x2 = V[i].position.x
-                      let y2 = V[i].position.y
-                      let dist = Math.sqrt((x2-x1)*(x2-x1) + (y2-y1)*(y2-y1))
-                      if(dist < min_dist){
-                        min_dist = dist
-                        best_vi = i
+                  }else if(37 <= e.keyCode && e.keyCode <= 40){
+                      console.log(e.keyCode)
+                      e.preventDefault();//規定の動作をキャンセル
+                      let dx = 0
+                      let dy = 0
+                      if(e.keyCode == 37){
+                          dx = -x_scale
+                      }else if(e.keyCode == 38){
+                          dy = -y_scale
+                      }else if(e.keyCode == 39){
+                          dx = x_scale
+                      }else{
+                          dy = y_scale
                       }
-                    }
-                    V[best_vi].position.x += dx
-                    V[best_vi].position.y += dy
-                    return
+                      if(ctrl_key){
+                          dx *= 5
+                          dy *= 5
+                      }
+                      if(shift_key){
+                          for(let i = 0; i < V.length; i++){
+                              Matter.Body.setPosition(V[i], {
+                                  x: V[i].position.x + dx,
+                                  y: V[i].position.y + dy
+                              });
+                          }
+                          return
+                      }
+                      let x1 = mouse.position.x
+                      let y1 = mouse.position.y
+                      let best_vi = 0
+                      let min_dist = 1000000000
+                      for(let i = 0; i < V.length; i++){
+                          let x2 = V[i].position.x
+                          let y2 = V[i].position.y
+                          let dist = Math.sqrt((x2-x1)*(x2-x1) + (y2-y1)*(y2-y1))
+                          if(dist < min_dist){
+                              min_dist = dist
+                              best_vi = i
+                          }
+                      }
+                      Matter.Body.setPosition(V[best_vi], {
+                          x: V[best_vi].position.x + dx,
+                          y: V[best_vi].position.y + dy
+                      });
+                      return
                   }else{
-                    console.log(e.keyCode)
-                    return
+                      console.log(e.keyCode)
+                      return
                   }
                   e.preventDefault();//規定の動作をキャンセル
 
                   if(shift_key){
-                    for(let vi = 0; vi < V.length; vi++){
-                      V[vi].isStatic = !move_ok
-                      if(move_ok){
-                        V[vi].render.fillStyle = 'black'
-                        V[vi].render.strokeStyle = 'black'
-                      }else{
-                        V[vi].render.fillStyle = 'green'
-                        V[vi].render.strokeStyle = 'green'
-                        let x = V[vi].position.x
-                        let y = V[vi].position.y
-                        if(x%x_scale >= x_scale/2){
-                          x = (x - x%x_scale + x_scale) | 0
-                        }else{
-                          x = (x - x%x_scale) | 0
-                        }
-                        if(y%y_scale >= y_scale/2){
-                          y = (y - y%y_scale + y_scale) | 0
-                        }else{
-                          y = (y - y%y_scale) | 0
-                        }
-                        V[vi].position.x = x
-                        V[vi].position.y = y
+                      for(let vi = 0; vi < V.length; vi++){
+                          V[vi].isStatic = !move_ok
+                          if(move_ok){
+                              V[vi].render.fillStyle = 'black'
+                              V[vi].render.strokeStyle = 'black'
+                          }else{
+                              V[vi].render.fillStyle = 'green'
+                              V[vi].render.strokeStyle = 'green'
+                              let x = V[vi].position.x
+                              let y = V[vi].position.y
+                              if(x%x_scale >= x_scale/2){
+                                  x = (x - x%x_scale + x_scale) | 0
+                              }else{
+                                  x = (x - x%x_scale) | 0
+                              }
+                              if(y%y_scale >= y_scale/2){
+                                  y = (y - y%y_scale + y_scale) | 0
+                              }else{
+                                  y = (y - y%y_scale) | 0
+                              }
+                              Matter.Body.setPosition(V[vi], {
+                                  x: x,
+                                  y: y
+                              });
+                          }
                       }
-                    }
-                    return
+                      return
                   }
                   let x1 = mouse.position.x
                   let y1 = mouse.position.y
                   let best_vi = 0
                   let min_dist = 1000000000
                   for(let i = 0; i < V.length; i++){
-                    let x2 = V[i].position.x
-                    let y2 = V[i].position.y
-                    let dist = Math.sqrt((x2-x1)*(x2-x1) + (y2-y1)*(y2-y1))
-                    if(dist < min_dist){
-                      min_dist = dist
-                      best_vi = i
-                    }
+                      let x2 = V[i].position.x
+                      let y2 = V[i].position.y
+                      let dist = Math.sqrt((x2-x1)*(x2-x1) + (y2-y1)*(y2-y1))
+                      if(dist < min_dist){
+                          min_dist = dist
+                          best_vi = i
+                      }
                   }
 
                   V[best_vi].isStatic = !move_ok
                   if(move_ok){
-                    V[best_vi].render.fillStyle = 'black'
-                    V[best_vi].render.strokeStyle = 'black'
+                      V[best_vi].render.fillStyle = 'black'
+                      V[best_vi].render.strokeStyle = 'black'
                   }else{
-                    V[best_vi].render.fillStyle = 'green'
-                    V[best_vi].render.strokeStyle = 'green'
-                    let x = V[best_vi].position.x
-                    let y = V[best_vi].position.y
-                    if(x%x_scale >= x_scale/2){
-                      x = (x - x%x_scale + x_scale) | 0
-                    }else{
-                      x = (x - x%x_scale) | 0
-                    }
-                    if(y%y_scale >= y_scale/2){
-                      y = (y - y%y_scale + y_scale) | 0
-                    }else{
-                      y = (y - y%y_scale) | 0
-                    }
-                    V[best_vi].position.x = x
-                    V[best_vi].position.y = y
+                      V[best_vi].render.fillStyle = 'green'
+                      V[best_vi].render.strokeStyle = 'green'
+                      let x = V[best_vi].position.x
+                      let y = V[best_vi].position.y
+                      if(x%x_scale >= x_scale/2){
+                          x = (x - x%x_scale + x_scale) | 0
+                      }else{
+                          x = (x - x%x_scale) | 0
+                      }
+                      if(y%y_scale >= y_scale/2){
+                          y = (y - y%y_scale + y_scale) | 0
+                      }else{
+                          y = (y - y%y_scale) | 0
+                      }
+                      Matter.Body.setPosition(V[best_vi], {
+                          x: x,
+                          y: y
+                      });
                   }
               };
               var score = document.createElement('score');
@@ -426,60 +449,60 @@
               let container = document.getElementById('container')
               container.appendChild(score);
               update = function(){
-                //score
-                let sum = 0
-                let ctx = scorelay.getContext('2d')
-                ctx.clearRect(0,0,width,height)
-                for(let i = 0; i < holes.length; i++){
-                  let x1 = holes[i][0]
-                  let y1 = holes[i][1]
-                  let min_dist = 123456789123456789
-                  for(let j = 0; j < V.length; j++){
-                    let x2 = V[j].position.x
-                    let y2 = V[j].position.y
-                    x2 = (x2 - x_origin) / x_scale
-                    y2 = (y2 - y_origin) / y_scale
-                    const dist = (x2-x1)*(x2-x1) + (y2-y1)*(y2-y1)
-                    if(dist < min_dist){
-                      min_dist = dist
-                    }
+                  //score
+                  let sum = 0
+                  let ctx = scorelay.getContext('2d')
+                  ctx.clearRect(0,0,width,height)
+                  for(let i = 0; i < holes.length; i++){
+                      let x1 = holes[i][0]
+                      let y1 = holes[i][1]
+                      let min_dist = 123456789123456789
+                      for(let j = 0; j < V.length; j++){
+                          let x2 = V[j].position.x
+                          let y2 = V[j].position.y
+                          x2 = (x2 - x_origin) / x_scale
+                          y2 = (y2 - y_origin) / y_scale
+                          const dist = (x2-x1)*(x2-x1) + (y2-y1)*(y2-y1)
+                          if(dist < min_dist){
+                              min_dist = dist
+                          }
+                      }
+                      sum += min_dist
+                      ctx.font = '24px serif'
+                      ctx.fillText(min_dist | 0, (x1+2) * x_scale + x_origin, (y1+2) * y_scale + y_origin)
                   }
-                  sum += min_dist
-                  ctx.font = '24px serif'
-                  ctx.fillText(min_dist | 0, (x1+2) * x_scale + x_origin, (y1+2) * y_scale + y_origin)
-                }
-                score.innerHTML = 'score:' + sum
+                  score.innerHTML = 'score:' + sum
 
-                //長さの制約
-                for(let i = 0; i < E.length; i++){
-                  let d = dist(E[i].bodyA.position, E[i].bodyB.position)
-                  let constraint_d = constraint_dists[i]
-                  let color = 'black'
-                  let line_width = 1
-                  let diff = d/constraint_d - 1
-                  if((d - constraint_d) * 1000000 > eps * constraint_d){
-                    color = 'red'
-                    line_width = 5
-                  }else if((d - constraint_d) * 1000000 < -eps * constraint_d){
-                    color = 'blue'
-                    line_width = 5
+                  //長さの制約
+                  for(let i = 0; i < E.length; i++){
+                      let d = dist(E[i].bodyA.position, E[i].bodyB.position)
+                      let constraint_d = constraint_dists[i]
+                      let color = 'black'
+                      let line_width = 1
+                      let diff = d/constraint_d - 1
+                      if((d - constraint_d) * 1000000 > eps * constraint_d){
+                          color = 'red'
+                          line_width = 5
+                      }else if((d - constraint_d) * 1000000 < -eps * constraint_d){
+                          color = 'blue'
+                          line_width = 5
+                      }
+                      E[i].render.strokeStyle = color
+                      E[i].render.lineWidth = line_width
                   }
-                  E[i].render.strokeStyle = color
-                  E[i].render.lineWidth = line_width
-                }
               }
               setInterval(update, 100)
           };
           let file = document.getElementById('json_file')
           file.addEventListener('change', function(e){
-            let result = e.target.files[0]
-            let reader = new FileReader()
-            reader.readAsText(result)
-            reader.addEventListener('load', function(){
-              input = JSON.parse(reader.result)
-              func(input)
-            })
+              let result = e.target.files[0]
+              let reader = new FileReader()
+              reader.readAsText(result)
+              reader.addEventListener('load', function(){
+                  input = JSON.parse(reader.result)
+                  func(input)
+              })
           })
-        </script>
-    </body>
+    </script>
+  </body>
 </html>
